@@ -1,6 +1,7 @@
 #include "include/handle_package/handle_package.h"
-#include "commands/helpers/color.h"
 #include "include/build_project/build_project.h"
+#include "include/dependency/dependency_service.h"
+#include "helpers/color.h"
 #include "commands.h"
 #include <iostream>
 
@@ -18,28 +19,46 @@ void check_args(int argc, int min_args, const std::string& usage) {
 void add_base_commands(CommandRegistry& registry) {
     Build build;
     HandlePackage handlePackage;
+
     registry.addCommand(Command("init", "Initialize a new package", [&handlePackage](int argc, char* argv[]) {
-        // init requires exactly "cppkg init <name>"
         check_args(argc, 3, "Usage: cppkg init <project-name>");
         handlePackage.create_package(argv[2]);
     }));
 
-    registry.addCommand(Command("add", "Add a dependency", [&handlePackage](int argc, char* argv[]) {
-        check_args(argc, 3, "Usage: cppkg add <package>@<version>");
-        handlePackage.add_dependency(argv[2]);
+    registry.addCommand(Command("add", "Add a dependency (author/repo@version)", [](int argc, char* argv[]) {
+        check_args(argc, 3, "Usage: cppkg add <author/repo>@<version>");
+        // --https flag for HTTPS clone
+        bool https = false;
+        std::string spec = argv[2];
+        for (int i = 3; i < argc; ++i) {
+            if (std::string(argv[i]) == "--https") https = true;
+        }
+        DependencyService deps(https);
+        deps.add(spec);
     }));
 
-    registry.addCommand(Command("remove", "Remove a dependency", [&handlePackage](int argc, char* argv[]) {
-        check_args(argc, 3, "Usage: cppkg remove <package>");
-        handlePackage.remove_dependency(argv[2]);
+    registry.addCommand(Command("remove", "Remove a dependency", [](int argc, char* argv[]) {
+        check_args(argc, 3, "Usage: cppkg remove <author/repo>");
+        DependencyService deps;
+        deps.remove(argv[2]);
     }));
 
     registry.addCommand(Command("build", "Build the package", [&build](int argc, char* argv[]) {
+        std::string path = ".";
         if (argc >= 3) {
-            build.build_project(argv[2]);
-        } else {
-            build.build_project(".");
+            path = argv[2];
         }
+        build.build_project(path);
+    }));
+
+    registry.addCommand(Command("clean", "Clean build artifacts and dependencies", [](int argc, char* argv[]) {
+        std::string path = ".";
+        if (argc >= 3) {
+            path = argv[2];
+        }
+        DependencyService deps;
+        deps.clean(path);
+        std::cout << Color::green << "Cleaned build/target" << Color::reset << "\n";
     }));
 
     registry.addCommand(Command("help", "Show help", [&registry](int argc, char* argv[]) {
