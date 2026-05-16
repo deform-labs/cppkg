@@ -12,15 +12,12 @@ inline Toml parse_toml(const std::string& path) {
     std::string line;
 
     while (std::getline(file, line)) {
-        // trim whitespace
         size_t start = line.find_first_not_of(" \t");
         if (start == std::string::npos) continue;
         line = line.substr(start);
 
-        // skip comments
         if (line[0] == '#') continue;
 
-        // section header [name]
         if (line[0] == '[') {
             size_t end = line.find(']');
             if (end == std::string::npos)
@@ -29,14 +26,12 @@ inline Toml parse_toml(const std::string& path) {
             continue;
         }
 
-        // key = value
         size_t eq = line.find('=');
         if (eq == std::string::npos) continue;
 
         std::string key = line.substr(0, eq);
         std::string val = line.substr(eq + 1);
 
-        // trim key and value
         auto trim = [](std::string s) {
             size_t a = s.find_first_not_of(" \t\"");
             size_t b = s.find_last_not_of(" \t\"");
@@ -63,7 +58,6 @@ inline std::vector<std::string> parse_array(const std::string& val) {
     std::stringstream ss(inner);
     std::string item;
     while (std::getline(ss, item, ',')) {
-        // trim whitespace and quotes
         size_t a = item.find_first_not_of(" \t\"");
         size_t b = item.find_last_not_of(" \t\"");
         if (a != std::string::npos)
