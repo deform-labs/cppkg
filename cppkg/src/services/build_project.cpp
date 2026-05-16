@@ -6,20 +6,27 @@
 #include "../helpers/color.h"
 #include <filesystem>
 #include <iostream>
+#include <string>
 #include <thread>
 #include <atomic>
 #include <chrono>
 
 namespace fs = std::filesystem;
 
-void spinner(const std::string& label, std::atomic<bool>& done) {
-    const char frames[] = { '|', '/', '-', '\\' };
-    int i = 0;
+void loading_bar(const std::string& label, std::atomic<bool>& done) {
+    const int bar_width = 30;
+    int progress = 0;
     while (!done) {
-        std::cout << "\r" << Color::cyan << frames[i++ % 4] << " " << label << Color::reset << std::flush;
+        // Increment progress cyclically to give a moving effect
+        progress = (progress + 1) % (bar_width + 1);
+        int percent = (progress * 100) / bar_width;
+        std::string bar = "[" + std::string(progress, '=') + std::string(bar_width - progress, ' ') + "]";
+        std::cout << "\r" << Color::cyan << bar << " " << percent << "% " << label << Color::reset << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    std::cout << "\r" << Color::green << "[OK] " << label << Color::reset << "    \n";
+    // When done, show full bar
+    std::string full_bar = "[" + std::string(bar_width, '=') + "]";
+    std::cout << "\r" << Color::green << full_bar << " 100% " << label << Color::reset << "    \n";
 }
 
 static std::string detect_build_type(int argc, char* argv[]) {
@@ -32,7 +39,7 @@ static std::string detect_build_type(int argc, char* argv[]) {
 }
 
 void Build::build_project(const std::string& path) {
-    SystemService shell_;
+    SystemService shell_; // used for running cmake commands
     auto toml = parse_toml(path + "/cppkg.toml");
     std::string name    = toml.get("package", "name");
     std::string cpp_std = toml.get("package", "cpp_std");
@@ -75,12 +82,12 @@ void Build::build_project(const std::string& path) {
 
     create_file("CMakeLists.txt", project_dir.string(), cmake);
 
-    std::string build_type = "RelWithDebInfo";
-
     std::atomic<bool> done(false);
 
-    std::thread t1(spinner, "Configuring...", std::ref(done));
-    int r1 = shell_.run_quiet("cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type);
+    std::thread t1(loading_bar, "Configuring...", std::ref(done));
+    // Detect build type (debug/release/relwithdebinfo)
+    std::string build_type = detect_build_type(0, nullptr);
+    int r1 = shell_.run("cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type);
     done = true;
     t1.join();
 
@@ -90,8 +97,8 @@ void Build::build_project(const std::string& path) {
     }
 
     done = false;
-    std::thread t2(spinner, "Building...", std::ref(done));
-    int r2 = shell_.run_quiet("cmake --build target/build");
+    std::thread t2(loading_bar, "Building...", std::ref(done));
+    int r2 = shell_.run("cmake --build target/build --progress");
     done = true;
     t2.join();
 

@@ -32,6 +32,9 @@ void add_base_commands(CommandRegistry& registry) {
         std::string spec = argv[2];
         for (int i = 3; i < argc; ++i) {
             if (std::string(argv[i]) == "--https") https = true;
+            if (std::string(argv[i]) == "--help")
+                std::cout << Color::cyan <<
+                    "Add a dependency to the workspace or to the package.\n Usage: cppkg add <author/repo>@<version>";
         }
         DependencyService deps(https);
         deps.add(spec);
