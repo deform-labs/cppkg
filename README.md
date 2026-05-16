@@ -16,9 +16,8 @@ cmake --build build
 Then add the output directory to your PATH so you can run `cppkg` from anywhere.
 
 ## Demos
-![demo](demos/cppkg_demo.gif)
----
-![demo](demos/cppkg_demo_1.gif)
+![init and build demo](demos/cppkg_demo.gif)
+![workspace demo](demos/cppkg_demo_1.gif)
 ---
 ![demo](demos/demo_2.png)
 
