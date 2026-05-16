@@ -1,152 +1,120 @@
 # cppkg
-
-A package manager for C++ inspired by Cargo. Create, build, and manage C++ projects and workspaces from the command line.
-
+ 
+> Cargo-inspired package manager for C++. Because manually creating `src/`, `CMakeLists.txt`, and `build/` for every project is hell.
+ 
+Cross-platform, self-hosting, and built on top of CMake and Git.
+ 
+## Features
+ 
+- `cppkg init` — scaffold a new C++ project in seconds
+- `cppkg add author/repo@version` — fetch dependencies directly from GitHub
+- `cppkg build` — generate CMakeLists, fetch deps, and compile
+- `cppkg clean` — remove build artifacts and cloned dependencies
+- Workspace support — manage multiple packages under one root
+- SSH with HTTPS fallback for dependency cloning
+- Cross-platform — Windows (MSVC), Linux (GCC, Clang)
 ## Installation
-
-Clone the repo and build with CMake:
-
-```powershell
+ 
+### From release
+ 
+Download the latest binary from [Releases](https://github.com/deform-labs/cppkg/releases) and add it to your `PATH`.
+ 
+### From source
+ 
+```bash
 git clone https://github.com/deform-labs/cppkg
 cd cppkg
-cmake -B build
+cmake -B build -S cppkg
 cmake --build build
 ```
-
-Then add the output directory to your `PATH` so you can run `cppkg` from anywhere.
-
-## Demos
-![init and build demo](demos/cppkg_demo.gif)
-![workspace demo](demos/cppkg_demo_1.gif)
----
-![demo](demos/demo_2.png)
-
-## Commands
-
-### `cppkg init <name>`
-Scaffold a new C++ package. If run inside a workspace, it automatically registers the package as a member.
-
+ 
+Add the output directory to your `PATH`.
+ 
+> **Note:** cppkg is self-hosting — once you have a binary, you can use `cppkg build cppkg` to rebuild itself.
+ 
+## Usage
+ 
+### Create a project
+ 
 ```
 cppkg init my-project
+cd my-project
 ```
-
+ 
 Creates:
 ```
 my-project/
-├── target/          ← build artifacts and cloned dependencies live here
-│   ├── deps/        ← cloned dependencies (e.g. fmt, spdlog, …)
-│   └── …            ← CMake build output
 ├── src/
 │   └── main.cpp
 ├── .gitignore
 └── cppkg.toml
 ```
-
-### `cppkg build [name]`
-Build a package. Run from inside a package directory, or pass a path.
-
-```
-cppkg build         # builds the current directory
-cppkg build my-project
-```
-
-* Reads `cppkg.toml` for project metadata.
-* Generates a `CMakeLists.txt` that:
-  * Adds every dependency under `target/deps/<repo>` via `add_subdirectory`.
-  * Links the resulting libraries (if any) to the executable.
-* Compiles the package source files (`src/*.cpp`) into `target/` using Ninja.
-
-### `cppkg add <author/repo>@<version>`
-Add a dependency to `cppkg.toml`.
-
-* **Format:** `author/repo@version` (e.g. `fmtlib/fmt@10.1.0`).
-* The command validates the remote repository (SSH first, HTTPS fallback) before writing to `cppkg.toml`.
-* Use `--https` if you want to force HTTPS cloning.
-
+ 
+### Add a dependency
+ 
 ```
 cppkg add fmtlib/fmt@10.1.0
-cppkg add spdlog/spdlog@1.12.0 --https
+cppkg add gabime/spdlog@v1.12.0
+cppkg add nlohmann/json@v3.11.2 --https
 ```
-
-### `cppkg remove <author/repo>`
-Remove a dependency from `cppkg.toml`.
-
+ 
+- Format: `author/repo@version`
+- Validates the remote repo exists before writing to `cppkg.toml`
+- SSH by default, HTTPS fallback automatic (or force with `--https`)
+### Build
+ 
+```
+cppkg build          # build current directory
+cppkg build my-project
+```
+ 
+- Reads `cppkg.toml` for project metadata
+- Clones any missing dependencies into `target/deps/`
+- Generates `CMakeLists.txt` with `add_subdirectory` and `target_link_libraries`
+- Compiles with CMake
+### Remove a dependency
+ 
 ```
 cppkg remove fmtlib/fmt
-cppkg remove spdlog/spdlog@1.12.0
 ```
-
-### `cppkg clean [path]`
-Remove all cloned dependencies and build artifacts.
-
+ 
+### Clean
+ 
 ```
-cppkg clean            # cleans the current package
-cppkg clean my-project # cleans a specific package
+cppkg clean
+cppkg clean my-project
 ```
-
-### `cppkg workspace init <name>`
-Create a new workspace.
-
-```
-cppkg workspace init my-workspace
-```
-
-Creates:
-```
-my-workspace/
-├── .gitignore
-└── cppkg.toml   ← contains a [workspace] section
-```
-
-The workspace `cppkg.toml` will be updated automatically when you initialize packages inside it.
-
-### `cppkg help`
-Show available commands.
-
-```
-cppkg help
-```
-
-## Package Manifest
-
-`cppkg.toml` for a package:
-
+ 
+Removes `target/deps/` and build artifacts.
+ 
+## Package manifest
+ 
 ```toml
 [package]
 name = "my-project"
 version = "0.1.0"
 cpp_std = "c++20"
-
+ 
 [dependencies]
 fmtlib/fmt = "10.1.0"
-spdlog/spdlog = "1.12.0"
+gabime/spdlog = "v1.12.0"
 ```
-
-*The key in `[dependencies]` is the full `author/repo` identifier; the value is the tag/branch to checkout.*
-
-`cppkg.toml` for a workspace:
-
-```toml
-[workspace]
-members = [
-    "my-lib",
-    "my-app",
-]
-```
-
+ 
+The key under `[dependencies]` is `author/repo`, the value is the tag or branch to clone.
+ 
 ## Workspaces
-
-Workspaces group multiple packages under a single root. Initialize a workspace, then `cd` into it and run `cppkg init` to add members automatically.
-
-```powershell
+ 
+Group multiple packages under one root.
+ 
+```
 cppkg workspace init my-workspace
 cd my-workspace
 cppkg init my-lib
 cppkg init my-app
 ```
-
-The workspace `cppkg.toml` will be updated automatically:
-
+ 
+`my-workspace/cppkg.toml`:
+ 
 ```toml
 [workspace]
 members = [
@@ -154,7 +122,28 @@ members = [
     "my-app",
 ]
 ```
-
+ 
+Packages initialized inside a workspace are automatically registered as members.
+ 
+## Project layout
+ 
+```
+my-project/
+├── src/
+│   └── main.cpp
+├── target/
+│   ├── deps/          ← cloned dependencies
+│   └── build/         ← CMake build output
+├── .gitignore
+├── CMakeLists.txt     ← generated by cppkg build
+└── cppkg.toml
+```
+ 
+## Limitations
+ 
+- Dependencies must have a `CMakeLists.txt` at their root to be linked automatically
+- No lockfile yet — versions are not pinned to exact commits
+- No conflict resolution for transitive dependencies
 ## License
-
+ 
 MIT
