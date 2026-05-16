@@ -1,4 +1,5 @@
 #include "../include/dependency/dependency_service.h"
+#include "../include/system/system.h"
 #include "../include/build_project/build_project.h"
 #include "../include/toml/toml_parser.h"
 #include "../helpers/create_file.h"
@@ -34,6 +35,7 @@ static std::string detect_build_type(int argc, char* argv[]) {
 }
 
 void Build::build_project(const std::string& path) {
+    SystemService shell_;
     auto toml = parse_toml(path + "/cppkg.toml");
     std::string name    = toml.get("package", "name");
     std::string cpp_std = toml.get("package", "cpp_std");
@@ -85,15 +87,13 @@ void Build::build_project(const std::string& path) {
     std::atomic<bool> done(false);
 
     std::thread t1(spinner, "Configuring...", std::ref(done));
-    std::string configure_cmd = "cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type + " > nul 2>&1";
-    std::system(configure_cmd.c_str());
+    shell_.run_quiet("cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type);
     done = true;
     t1.join();
 
     done = false;
     std::thread t2(spinner, "Building...", std::ref(done));
-    std::string build_cmd = "cmake --build target/build > nul 2>&1";
-    std::system(build_cmd.c_str());
+    shell_.run_quiet("cmake --build target/build");
     done = true;
     t2.join();
 
