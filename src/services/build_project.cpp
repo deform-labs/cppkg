@@ -46,14 +46,12 @@ void Build::build_project(const std::string& path) {
     fs::path project_dir = fs::current_path() / path;
     fs::current_path(project_dir);
 
-    // ---- Step 1: Fetch dependencies ----
     DependencyService deps;
     std::cout << Color::cyan << "Fetching dependencies..." << Color::reset << "\n";
     if (!deps.fetch_all(".")) {
         std::cout << Color::red << "Some dependencies failed to fetch" << Color::reset << "\n";
     }
 
-    // ---- Step 2: Generate CMakeLists.txt ----
     std::cout << Color::cyan << "Generating CMakeLists.txt..." << Color::reset << "\n";
 
     std::string cmake;
@@ -63,7 +61,6 @@ void Build::build_project(const std::string& path) {
     cmake += "set(CMAKE_CXX_STANDARD_REQUIRED True)\n\n";
     cmake += "file(GLOB_RECURSE SOURCES \"src/*.cpp\")\n\n";
 
-    // Add dependency subdirectories
     auto dependencies = deps.load_dependencies(".");
     bool has_add_subdirectory = false;
     for (const auto& dep : dependencies) {
@@ -72,7 +69,6 @@ void Build::build_project(const std::string& path) {
      }
     if (has_add_subdirectory) cmake += "\n";
 
-    // Link libraries (using target name same as repo name)
     cmake += "add_executable(" + name + " ${SOURCES})\n";
     cmake += "\ntarget_link_libraries(" + name + "\n";
     for (const auto& dep : dependencies) {

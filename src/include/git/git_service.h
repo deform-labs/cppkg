@@ -1,6 +1,6 @@
 #pragma once
-#include <string>
 #include "../system/system.h"
+#include <string>
 
 class GitService {
     public:
@@ -10,7 +10,6 @@ class GitService {
 
         bool validate_repo(const std::string& author, const std::string& repo);
 
-        /// @param https if true, force HTTPS regardless of https_mode_
         std::string build_url(const std::string& author, const std::string& repo, bool https = false) const;
 
         static std::string dep_path(const std::string& repo, const std::string& base = "target");

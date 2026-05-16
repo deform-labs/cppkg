@@ -26,13 +26,13 @@ std::string SystemService::run_with_output(const std::string& command) {
     #else
         FILE* pipe = popen(command.c_str(), "r");
     #endif
-        if (!pipe) return "";
+    if (!pipe) return "";
 
-        std::string result;
-        std::array<char, 4096> buffer;
-        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
-            result += buffer.data();
-        }
+    std::string result;
+    std::array<char, 4096> buffer;
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
+        result += buffer.data();
+    }
 
     #ifdef _WIN32
         int rc = _pclose(pipe);

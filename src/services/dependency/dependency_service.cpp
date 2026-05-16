@@ -153,8 +153,8 @@ std::vector<Dependency> DependencyService::load_dependencies(const std::string& 
                 deps.push_back(dep);
             }
         }
-    } catch (...) {
-        // If parsing fails, return empty list
+    } catch (const std::exception& e) {
+        std::cout << Color::red << "Warning: failed to parse dependencies: " << e.what() << Color::reset << "\n";
     }
 
     return deps;
