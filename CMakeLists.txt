@@ -7,8 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 file(GLOB_RECURSE SOURCES
      "src/*.cpp"
      "src/*.h"
-     "src/commands/*.cpp"
-     "src/commands/*.h"
      "src/**/*.cpp"
      "src/**/*.h"
 )
