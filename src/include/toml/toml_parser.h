@@ -1,6 +1,6 @@
 #pragma once
-#include "toml.h"
 #include <sstream>
+#include "toml.h"
 
 inline Toml parse_toml(const std::string& path) {
     std::ifstream file(path);

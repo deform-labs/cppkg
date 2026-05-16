@@ -1,9 +1,8 @@
 #pragma once
-
-#include <string>
 #include <functional>
-#include <vector>
 #include <stdexcept>
+#include <vector>
+#include <string>
 
 
 struct Command {

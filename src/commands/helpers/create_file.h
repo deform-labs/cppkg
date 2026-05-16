@@ -1,8 +1,8 @@
 // utils.h
 #pragma once
+#include <stdexcept>
 #include <fstream>
 #include <string>
-#include <stdexcept>
 
 inline void create_file(const std::string& name, const std::string& path, const std::string& content) {
     std::ofstream file(path + "/" + name);

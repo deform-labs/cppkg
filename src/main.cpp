@@ -1,8 +1,8 @@
-#include <iostream>
-#include "commands.h"
 #include "include/handle_package/handle_package.h"
 #include "commands/helpers/color.h"
 #include "include/build/build.h"
+#include "commands.h"
+#include <iostream>
 
 void handle_error(const std::runtime_error& e) {
     std::cout << Color::red << e.what() << Color::reset << std::endl;
@@ -43,7 +43,7 @@ void add_base_commands(CommandRegistry& registry) {
     }));
 
     registry.addCommand(Command("help", "Show help", [&registry](int argc, char* argv[]) {
-        std::cout << Color::red << "Usage: cppkg <command>\n\n" << Color::reset;
+        std::cout << Color::green << "Usage: cppkg <command> [args]\n\n" << Color::reset;
         std::cout << Color::cyan << "Available commands:\n";
         for (const Command& command : registry.commands) {
             std::cout << "    " << Color::yellow << command.name << Color::reset << " - " << command.description << "\n";

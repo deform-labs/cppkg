@@ -1,2 +1,4 @@
+#self explanatory
 build/
+#packages is hidden because it contains testing packages
 packages/

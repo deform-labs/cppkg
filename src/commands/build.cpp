@@ -1,13 +1,13 @@
+#include "../include/toml/toml_parser.h"
+#include "../include/build/build.h"
+#include "helpers/create_file.h"
+#include "helpers/color.h"
+#include <filesystem>
+#include <iostream>
+#include <cstdlib>
 #include <thread>
 #include <atomic>
 #include <chrono>
-#include "../include/build/build.h"
-#include "../include/toml/toml_parser.h"
-#include "helpers/create_file.h"
-#include "helpers/color.h"
-#include <cstdlib>
-#include <filesystem>
-#include <iostream>
 
 namespace fs = std::filesystem;
 
@@ -46,7 +46,7 @@ void Build::build_project(const std::string& path) {
     std::atomic<bool> done(false);
 
     std::thread t1(spinner, "Configuring...", std::ref(done));
-    std::system("cmake -B build > nul 2>&1");
+    std::system("cmake -B build -G \"ninja\" > nul 2>&1");
     done = true;
     t1.join();
 
