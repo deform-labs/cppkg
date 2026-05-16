@@ -1,5 +1,9 @@
 #pragma once
+#include <stdexcept>
 #include <sstream>
+#include <fstream>
+#include <string>
+#include <vector>
 #include "toml.h"
 
 inline Toml parse_toml(const std::string& path) {
