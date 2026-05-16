@@ -6,7 +6,6 @@
 #include "../helpers/color.h"
 #include <filesystem>
 #include <iostream>
-#include <cstdlib>
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -23,9 +22,7 @@ void spinner(const std::string& label, std::atomic<bool>& done) {
     std::cout << "\r" << Color::green << "[OK] " << label << Color::reset << "    \n";
 }
 
-/// Determine build type from optional flags
 static std::string detect_build_type(int argc, char* argv[]) {
-    // Flags: --debug -> Debug, --release -> Release, default -> RelWithDebInfo
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--debug")   return "Debug";
