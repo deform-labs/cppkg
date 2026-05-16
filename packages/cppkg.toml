@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "my-desk",
+]
+
+[dependencies]

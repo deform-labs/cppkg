@@ -6,7 +6,6 @@
 #include <stdexcept>
 
 
-// Option A: add a constructor to the struct
 struct Command {
     std::string name;
     std::string description;
