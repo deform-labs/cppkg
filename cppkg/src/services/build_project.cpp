@@ -80,15 +80,25 @@ void Build::build_project(const std::string& path) {
     std::atomic<bool> done(false);
 
     std::thread t1(spinner, "Configuring...", std::ref(done));
-    shell_.run_quiet("cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type);
+    int r1 = shell_.run_quiet("cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type);
     done = true;
     t1.join();
 
+    if (r1 != 0) {
+        std::cout << Color::red << "Configuration failed!" << Color::reset << "\n";
+        return;
+    }
+
     done = false;
     std::thread t2(spinner, "Building...", std::ref(done));
-    shell_.run_quiet("cmake --build target/build");
+    int r2 = shell_.run_quiet("cmake --build target/build");
     done = true;
     t2.join();
+
+    if (r2 != 0) {
+        std::cout << Color::red << "Build failed!" << Color::reset << "\n";
+        return;
+    }
 
     std::cout << Color::green << "Build successful: " << name << Color::reset << "\n";
 }
