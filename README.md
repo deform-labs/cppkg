@@ -1,5 +1,5 @@
 # cppkg
- 
+[![CMake on multiple platforms](https://github.com/deform-labs/cppkg/actions/workflows/cmake-multi-platform.yml/badge.svg)](https://github.com/deform-labs/cppkg/actions/workflows/cmake-multi-platform.yml)
 > Cargo-inspired package manager for C++. Because manually creating `src/`, `CMakeLists.txt`, and `build/` for every project is hell.
  
 Cross-platform, self-hosting, and built on top of CMake and Git.
