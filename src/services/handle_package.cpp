@@ -22,7 +22,6 @@ void HandlePackage::create_package(const std::string& name) {
     fs::path root = fs::path(name);
 
     fs::create_directories(root / "src");
-    fs::create_directories(root / "build");
 
     create_file("cppkg.toml", root.string(),
         "[package]\n"
@@ -32,7 +31,7 @@ void HandlePackage::create_package(const std::string& name) {
         "\n[dependencies]\n"
     );
 
-    create_file(".gitignore", root.string(), "build/\n");
+    create_file(".gitignore", root.string(), "target/\n");
 
     create_file("main.cpp", (root / "src").string(),
         "#include <iostream>\n\n"

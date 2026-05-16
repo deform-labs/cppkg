@@ -2,8 +2,8 @@
 #include "../../include/toml/toml_parser.h"
 #include "../../helpers/color.h"
 #include <filesystem>
-#include <fstream>
 #include <iostream>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -170,7 +170,7 @@ bool DependencyService::fetch_all(const std::string& project_root) {
     fs::current_path(project_root);
 
     for (const auto& dep : deps) {
-        std::string dest = GitService::dep_path(dep.repo);
+        std::string dest = GitService::dep_path(dep.repo, "target/deps");
 
         if (fs::exists(dest)) {
             std::cout << Color::cyan << "Already fetched: " << dep.name << Color::reset << "\n";
@@ -187,7 +187,7 @@ bool DependencyService::fetch_all(const std::string& project_root) {
 }
 
 void DependencyService::clean(const std::string& project_root) {
-    fs::path deps_dir = fs::path(project_root) / "deps";
+    fs::path deps_dir = fs::path(project_root) / "target" / "deps";
     if (fs::exists(deps_dir)) {
         fs::remove_all(deps_dir);
         std::cout << Color::green << "Cleaned deps/" << Color::reset << "\n";

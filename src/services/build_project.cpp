@@ -54,49 +54,45 @@ void Build::build_project(const std::string& path) {
     // ---- Step 2: Generate CMakeLists.txt ----
     std::cout << Color::cyan << "Generating CMakeLists.txt..." << Color::reset << "\n";
 
-    std::string cmake = R"(cmake_minimum_required(VERSION 3.10)
-project()" + name + R"()
-
-set(CMAKE_CXX_STANDARD )" + cpp_std + R"()
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-
-)";
+    std::string cmake;
+    cmake += "cmake_minimum_required(VERSION 3.10)\n";
+    cmake += "project(" + name + ")\n\n";
+    cmake += "set(CMAKE_CXX_STANDARD " + cpp_std + ")\n";
+    cmake += "set(CMAKE_CXX_STANDARD_REQUIRED True)\n\n";
+    cmake += "file(GLOB_RECURSE SOURCES \"src/*.cpp\")\n\n";
 
     // Add dependency subdirectories
     auto dependencies = deps.load_dependencies(".");
     bool has_add_subdirectory = false;
     for (const auto& dep : dependencies) {
-        cmake += "add_subdirectory(deps/" + dep.repo + ")\n";
+        cmake += "add_subdirectory(target/deps/" + dep.repo + ")\n";
         has_add_subdirectory = true;
-    }
+     }
     if (has_add_subdirectory) cmake += "\n";
 
     // Link libraries (using target name same as repo name)
     cmake += "add_executable(" + name + " ${SOURCES})\n";
     cmake += "\ntarget_link_libraries(" + name + "\n";
     for (const auto& dep : dependencies) {
-        cmake += "    " + dep.repo + "\n";
+        cmake += "   " + dep.repo + "\n";
     }
     cmake += ")\n";
 
     create_file("CMakeLists.txt", project_dir.string(), cmake);
 
-    // ---- Step 3: Build ----
     std::string build_type = "RelWithDebInfo";
 
     std::atomic<bool> done(false);
 
     std::thread t1(spinner, "Configuring...", std::ref(done));
-    std::string configure_cmd = "cmake -B build/target -G \"ninja\" -DCMAKE_BUILD_TYPE=" + build_type + " > nul 2>&1";
+    std::string configure_cmd = "cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type + " > nul 2>&1";
     std::system(configure_cmd.c_str());
     done = true;
     t1.join();
 
     done = false;
     std::thread t2(spinner, "Building...", std::ref(done));
-    std::string build_cmd = "cmake --build build/target > nul 2>&1";
+    std::string build_cmd = "cmake --build target/build > nul 2>&1";
     std::system(build_cmd.c_str());
     done = true;
     t2.join();
