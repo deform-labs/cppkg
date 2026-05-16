@@ -13,8 +13,7 @@ file(GLOB_RECURSE SOURCES
      "src/**/*.h"
 )
 
-set(INCLUDE_DIRS "src/include")
 
 add_executable(cppkg ${SOURCES})
-target_include_directories(cppkg PRIVATE ${INCLUDE_DIRS})
+target_include_directories(cppkg PRIVATE src/include src)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

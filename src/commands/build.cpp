@@ -1,5 +1,5 @@
-#include "../include/toml/toml_parser.h"
-#include "../include/build/build.h"
+#include "toml/toml_parser.h"
+#include "build/build.h"
 #include "helpers/create_file.h"
 #include "helpers/color.h"
 #include <filesystem>
