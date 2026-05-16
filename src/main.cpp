@@ -1,6 +1,6 @@
-#include "include/handle_package/handle_package.h"
+#include "handle_package/handle_package.h"
 #include "commands/helpers/color.h"
-#include "include/build/build.h"
+#include "build/build.h"
 #include "commands.h"
 #include <iostream>
 
