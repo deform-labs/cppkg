@@ -84,7 +84,7 @@ void add_base_commands(CommandRegistry& registry) {
         if (argc >= 3) {
             path = argv[2];
         }
-        build.build_project(path);
+        build.run_project(path);
     }));
 
     registry.addCommand(Command("clean", "Clean build artifacts and dependencies", [](int argc, char* argv[]) {
@@ -106,10 +106,10 @@ void add_base_commands(CommandRegistry& registry) {
         // 1️⃣ Sort commands so the longest name appears first
         std::vector<Command> sorted = registry.commands;
         std::sort(sorted.begin(), sorted.end(), [](const Command& a, const Command& b) {
-            return a.name.size() > b.name.size(); // descending length
+            return a.name.size() > b.name.size(); // descend
         });
 
-        // 2️⃣ Determine the width of the longest command name
+        // get the longest d out the 3 :tongue:
         size_t max_len = 0;
         for (const auto& c : sorted) {
             max_len = std::max(max_len, c.name.size());
