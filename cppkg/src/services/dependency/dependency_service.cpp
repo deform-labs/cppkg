@@ -34,7 +34,7 @@ Dependency DependencyService::add(const std::string& spec, const std::string& pr
 
     auto [author, repo] = Dependency::parse_name(name);
 
-    // Validate the repo exists before writing to cppkg.toml
+    // does it exist? I dont knowww
     std::cout << "Checking repository: " << name << "...\n";
     if (!git_.validate_repo(author, repo)) {
         throw std::runtime_error("Repository not found or unreachable: " + name +
@@ -92,19 +92,19 @@ void DependencyService::remove(const std::string& name, const std::string& proje
                          std::istreambuf_iterator<char>());
     in.close();
 
-    // Find the [dependencies] section
+    // kirkenstein if you dont know what this block does youre lowk cooked :skull:
     size_t dep_section = content.find("[dependencies]");
     if (dep_section == std::string::npos)
         throw std::runtime_error("No [dependencies] section found");
 
-    // Look for the dependency key
+    // did you find the key? 
     std::string search;
 
-    // Try exact match with author/repo first
+    // ah tinder match
     search = pkg_name + " = ";
     size_t pos = content.find(search, dep_section);
 
-    // If not found, try just the repo name part
+    // swipe left if it doesnt match :skull:
     if (pos == std::string::npos) {
         auto slash = pkg_name.find('/');
         if (slash != std::string::npos) {
@@ -117,7 +117,7 @@ void DependencyService::remove(const std::string& name, const std::string& proje
     if (pos == std::string::npos)
         throw std::runtime_error("Dependency not found: " + pkg_name);
 
-    // Find line boundaries and remove the entire line
+    // brutus deletus lines
     size_t line_start = content.rfind('\n', pos);
     if (line_start == std::string::npos) line_start = 0;
     else line_start++; // skip the newline char itself
@@ -145,7 +145,7 @@ std::vector<Dependency> DependencyService::load_dependencies(const std::string& 
         auto toml = parse_toml(toml_path);
 
         if (!toml.has("dependencies", "")) {
-            // Check if there are any key-value pairs under [dependencies]
+            // does dependencies have children? 
             auto it = toml.sections.find("dependencies");
             if (it == toml.sections.end())
                 return deps;
@@ -172,7 +172,7 @@ std::vector<Dependency> DependencyService::load_dependencies(const std::string& 
 bool DependencyService::fetch_all(const std::string& project_root) {
     auto deps = load_dependencies(project_root);
     if (deps.empty()) {
-        return true; // nothing to fetch
+        return true; // lil dog didnt find the ball :sob:
     }
 
     bool all_ok = true;
