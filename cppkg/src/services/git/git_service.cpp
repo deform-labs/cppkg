@@ -74,7 +74,7 @@ bool GitService::clone(const std::string& author, const std::string& repo, const
 
 /// Validates the repository for the given author and repo, using HTTPS if enabled
 bool GitService::validate_repo(const std::string& author, const std::string& repo) {
-    // Try preferred method first
+    // if user prefereth ith cppkgth shall useth ith
     std::string url = build_url(author, repo, false);
     std::string cmd = "git ls-remote " + url + " HEAD";
     int rc = shell_.run_quiet(cmd);
