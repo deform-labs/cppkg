@@ -172,7 +172,7 @@ std::vector<Dependency> DependencyService::load_dependencies(const std::string& 
 bool DependencyService::fetch_all(const std::string& project_root) {
     auto deps = load_dependencies(project_root);
     if (deps.empty()) {
-        return true; // nothing to fetch
+        return true; // lil dog didnt find the ball :sob:
     }
 
     bool all_ok = true;
