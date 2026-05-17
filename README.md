@@ -3,7 +3,8 @@
 > Cargo-inspired package manager for C++. Because manually creating `src/`, `CMakeLists.txt`, and `build/` for every project is hell.
  
 Cross-platform, self-hosting, and built on top of CMake and Git.
- 
+
+## ALL COMMENTS IN THE FILES ARE ALL WRITTEN BY HUMANS!
 ## Features
  
 - `cppkg init` — scaffold a new C++ project in seconds

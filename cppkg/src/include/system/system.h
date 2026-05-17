@@ -8,4 +8,6 @@ class SystemService {
         int run_quiet(const std::string& command);
 
         std::string run_with_output(const std::string& command);
+
+        bool command_exists(const std::string& command);
 };

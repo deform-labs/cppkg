@@ -20,6 +20,7 @@ void check_args(int argc, int min_args, const std::string& usage) {
     }
 }
 
+/// oh look mom a git integration!
 void* git_integration(int argc, char* argv[]) {
     check_args(argc, 3, "Usage: cppkg git <command>");
     std::string sub = argv[2];
@@ -37,6 +38,10 @@ void* git_integration(int argc, char* argv[]) {
     exit(0);
 }
 
+/*
+ *  just adds base commands to the registry
+ *  if you didnt already understand it idk whats in your brain
+ */
 void add_base_commands(CommandRegistry& registry) {
     Build build;
     HandlePackage handlePackage;
@@ -48,7 +53,6 @@ void add_base_commands(CommandRegistry& registry) {
 
     registry.addCommand(Command("add", "Add a dependency (author/repo@version)", [](int argc, char* argv[]) {
         check_args(argc, 3, "Usage: cppkg add <author/repo>@<version>");
-        // --https flag for HTTPS clone
         bool https = false;
         std::string spec = argv[2];
         for (int i = 3; i < argc; ++i) {
@@ -142,6 +146,7 @@ void add_base_commands(CommandRegistry& registry) {
     registry.addCommand(Command("git", "github integration inside of cppkg!", git_integration));
 }
 
+/// just look it up in google if you dont know what this does.
 int main(int argc, char* argv[]) {
     CommandRegistry registry;
     add_base_commands(registry);

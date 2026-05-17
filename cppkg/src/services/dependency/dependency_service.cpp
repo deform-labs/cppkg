@@ -7,6 +7,10 @@
 
 namespace fs = std::filesystem;
 
+/* parses a dependency name into author and repo components
+ *
+ * this is very technical it needed this comment :thumbs_up:
+ */
 std::pair<std::string, std::string> Dependency::parse_name(const std::string& full) {
     size_t slash = full.find('/');
     if (slash == std::string::npos) {
@@ -15,9 +19,11 @@ std::pair<std::string, std::string> Dependency::parse_name(const std::string& fu
     return {full.substr(0, slash), full.substr(slash + 1)};
 }
 
+///  dependencies, nice.
 DependencyService::DependencyService(bool use_https)
     : git_(use_https) {}
 
+/// ADD A DEPENDENCY GODDAMNIT
 Dependency DependencyService::add(const std::string& spec, const std::string& project_root) {
     size_t at = spec.find('@');
     if (at == std::string::npos)
@@ -70,6 +76,7 @@ Dependency DependencyService::add(const std::string& spec, const std::string& pr
     return dep;
 }
 
+/// REMOVE A DEPENDENCY GODDAMNIT
 void DependencyService::remove(const std::string& name, const std::string& project_root) {
     std::string pkg_name = name;
     size_t at = name.find('@');
@@ -126,6 +133,7 @@ void DependencyService::remove(const std::string& name, const std::string& proje
     std::cout << Color::green << "Removed dependency: " << pkg_name << Color::reset << "\n";
 }
 
+/// shall we load your dependencies sir?
 std::vector<Dependency> DependencyService::load_dependencies(const std::string& project_root) {
     std::vector<Dependency> deps;
     std::string toml_path = project_root + "/cppkg.toml";
@@ -160,6 +168,7 @@ std::vector<Dependency> DependencyService::load_dependencies(const std::string& 
     return deps;
 }
 
+/// shall we fetch all your dependencies sir?
 bool DependencyService::fetch_all(const std::string& project_root) {
     auto deps = load_dependencies(project_root);
     if (deps.empty()) {
@@ -186,6 +195,7 @@ bool DependencyService::fetch_all(const std::string& project_root) {
     return all_ok;
 }
 
+/// shall we clean your dependencies sir?
 void DependencyService::clean(const std::string& project_root) {
     fs::path deps_dir = fs::path(project_root) / "target" / "deps";
     if (fs::exists(deps_dir)) {

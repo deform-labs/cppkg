@@ -13,6 +13,7 @@
 
 namespace fs = std::filesystem;
 
+/// Spinner animation lmao W UX
 void spinner(const std::string& label, std::atomic<bool>& done) {
     const char frames[] = { '|', '/', '-', '\\' };
     int i = 0;
@@ -23,6 +24,7 @@ void spinner(const std::string& label, std::atomic<bool>& done) {
     std::cout << "\r" << Color::green << "[OK] " << label << Color::reset << "    \n";
 };
 
+/// Detect the build type
 static std::string detect_build_type(int argc, char* argv[]) {
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
@@ -32,6 +34,7 @@ static std::string detect_build_type(int argc, char* argv[]) {
     return "RelWithDebInfo";
 }
 
+/// Build the project
 void Build::build_project(const std::string& path) {
     SystemService shell_; // used for running cmake commands
     auto toml = parse_toml(path + "/cppkg.toml");
@@ -103,8 +106,9 @@ void Build::build_project(const std::string& path) {
     std::cout << Color::green << "Build successful: " << name << Color::reset << "\n";
 }
 
+/// Run the project
 void Build::run_project(const std::string& path) {
-    SystemService shell_; // used for running cmake commands
+    SystemService shell_;
     auto toml = parse_toml(path + "/cppkg.toml");
     std::string name = toml.get("package", "name");
 

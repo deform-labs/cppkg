@@ -3,12 +3,12 @@
 #include <cstdio>
 #include <array>
 
-// _popen/_pclose are in <cstdio> on all platforms
-
+/// JUST DO IT
 int SystemService::run(const std::string& command) {
     return std::system(command.c_str());
 }
 
+/// shh mom will hear us
 int SystemService::run_quiet(const std::string& command) {
     #ifdef _WIN32
         std::string cmd = command + " > nul 2>&1";
@@ -19,6 +19,7 @@ int SystemService::run_quiet(const std::string& command) {
     return std::system(cmd.c_str());
 }
 
+/// mom heard us!
 std::string SystemService::run_with_output(const std::string& command) {
     #ifdef _WIN32
         // Use _popen on Windows
@@ -42,4 +43,15 @@ std::string SystemService::run_with_output(const std::string& command) {
 
     if (rc != 0) return "";
         return result;
+}
+
+
+/// roses are red, violets are blue, we don't know what's best for these two.
+bool SystemService::command_exists(const std::string& command) {
+    #ifdef _WIN32
+        return run_quiet("where " + command) == 0;
+    #else
+        if (run_quiet("command -v " + command) == 0) return true;
+        return run_quiet("which " + command) == 0;
+    #endif
 }
