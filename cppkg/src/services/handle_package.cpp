@@ -81,7 +81,8 @@ void HandlePackage::create_workspace(const std::string& name) {
     std::cout << Color::green << "Created workspace: " << name << Color::reset << "\n";
 }
 
-/// Add a dependency to the package (NO SHIT SHERLOCK)
+/// requires delicacy to use ಠ_ಠ !!!!!!!!
+/// soft like porcelane!
 void HandlePackage::add_dependency(const std::string& package) {
     size_t at = package.find('@');
     if (at == std::string::npos)
@@ -112,7 +113,8 @@ void HandlePackage::add_dependency(const std::string& package) {
     std::cout << Color::green << "Added: " << pkg_name << " @ " << version << Color::reset << "\n";
 }
 
-/// Remove a dependency from the package (NO SHIT SHERLOCK)
+/// delicate yes.
+/// brute force? yes.
 void HandlePackage::remove_dependency(const std::string& package) {
     std::string pkg_name = package;
     size_t at = package.find('@');
