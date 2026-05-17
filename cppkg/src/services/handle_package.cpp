@@ -82,7 +82,7 @@ void HandlePackage::create_workspace(const std::string& name) {
 }
 
 /// requires delicacy to use ಠ_ಠ !!!!!!!!
-/// soft like porcelane!
+/// soft like baby shit.
 void HandlePackage::add_dependency(const std::string& package) {
     size_t at = package.find('@');
     if (at == std::string::npos)
