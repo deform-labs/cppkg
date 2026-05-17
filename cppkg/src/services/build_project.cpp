@@ -13,21 +13,15 @@
 
 namespace fs = std::filesystem;
 
-void loading_bar(const std::string& label, std::atomic<bool>& done) {
-    const int bar_width = 30;
-    int progress = 0;
+void spinner(const std::string& label, std::atomic<bool>& done) {
+    const char frames[] = { '|', '/', '-', '\\' };
+    int i = 0;
     while (!done) {
-        // Increment progress cyclically to give a moving effect
-        progress = (progress + 1) % (bar_width + 1);
-        int percent = (progress * 100) / bar_width;
-        std::string bar = "[" + std::string(progress, '=') + std::string(bar_width - progress, ' ') + "]";
-        std::cout << "\r" << Color::cyan << bar << " " << percent << "% " << label << Color::reset << std::flush;
+        std::cout << "\r" << Color::cyan << frames[i++ % 4] << " " << label << Color::reset << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    // When done, show full bar
-    std::string full_bar = "[" + std::string(bar_width, '=') + "]";
-    std::cout << "\r" << Color::green << full_bar << " 100% " << label << Color::reset << "    \n";
-}
+    std::cout << "\r" << Color::green << "[OK] " << label << Color::reset << "    \n";
+};
 
 static std::string detect_build_type(int argc, char* argv[]) {
     for (int i = 2; i < argc; ++i) {
@@ -84,8 +78,7 @@ void Build::build_project(const std::string& path) {
 
     std::atomic<bool> done(false);
 
-    std::thread t1(loading_bar, "Configuring...", std::ref(done));
-    // Detect build type (debug/release/relwithdebinfo)
+    std::thread t1(spinner, "Configuring: ", std::ref(done));
     std::string build_type = detect_build_type(0, nullptr);
     int r1 = shell_.run("cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type);
     done = true;
@@ -97,8 +90,8 @@ void Build::build_project(const std::string& path) {
     }
 
     done = false;
-    std::thread t2(loading_bar, "Building...", std::ref(done));
-    int r2 = shell_.run("cmake --build target/build --progress");
+    std::thread t2(spinner, "Building: ", std::ref(done));
+    int r2 = shell_.run("cmake --build target/build");
     done = true;
     t2.join();
 
@@ -108,4 +101,23 @@ void Build::build_project(const std::string& path) {
     }
 
     std::cout << Color::green << "Build successful: " << name << Color::reset << "\n";
+}
+
+void Build::run_project(const std::string& path) {
+    SystemService shell_; // used for running cmake commands
+    auto toml = parse_toml(path + "/cppkg.toml");
+    std::string name = toml.get("package", "name");
+
+    std::atomic<bool> done(false);
+
+    std::thread t(spinner, "Running: ", std::ref(done));
+    int r = shell_.run("target/build/" + name);
+    done = true;
+    t.join();
+
+    if (r != 0) {
+        std::cout << Color::red << "Run failed!" << Color::reset << "\n";
+    } else {
+        std::cout << Color::green << "Run successful: " << name << Color::reset << "\n";
+    }
 }

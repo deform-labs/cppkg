@@ -84,3 +84,15 @@ bool GitService::validate_repo(const std::string& author, const std::string& rep
 
     return rc == 0;
 }
+
+bool GitService::commit(const std::string& message) {
+    std::string cmd = "git commit -m \"" + message + "\"";
+    int rc = shell_.run(cmd);
+    return rc == 0;
+}
+
+bool GitService::push() {
+    std::string cmd = "git push";
+    int rc = shell_.run(cmd);
+    return rc == 0;
+}

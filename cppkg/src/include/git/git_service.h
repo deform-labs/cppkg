@@ -14,6 +14,9 @@ class GitService {
 
         static std::string dep_path(const std::string& repo, const std::string& base = "target");
 
+        bool commit(const std::string& message);
+
+        bool push();
     private:
         bool https_mode_;
         SystemService shell_;

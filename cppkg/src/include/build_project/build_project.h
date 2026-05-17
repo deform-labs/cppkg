@@ -4,4 +4,5 @@
 class Build {
     public:
         static void build_project(const std::string& path);
+        static void run_project(const std::string& path);
 };
