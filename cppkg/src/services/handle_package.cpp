@@ -7,6 +7,7 @@
 
 
 /// Create a package with the given name (NO SHIT SHERLOCK)
+/// btw we arent amazon if you want a package at your door instead of your executable try ebay or something like that
 void HandlePackage::create_package(const std::string& name) {
     namespace fs = std::filesystem;
 
@@ -63,7 +64,8 @@ void HandlePackage::create_package(const std::string& name) {
     std::cout << Color::green << "Created package: " << name << Color::reset << "\n";
 }
 
-/// Create a workspace with the given name (NO SHIT SHERLOCK)
+/// Create a workspace with the given name (NO SHIT SHERLOCK) 
+/// workspace? Arent you already working at one? 
 void HandlePackage::create_workspace(const std::string& name) {
     namespace fs = std::filesystem;
     fs::create_directories(name);
