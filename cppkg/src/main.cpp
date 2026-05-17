@@ -774,4 +774,4 @@ int main(int argc, char* argv[]) {
 
 
 
-/// the real jackpot were the commets along the way -- yydev-official 2026.
+/// the real jackpot were the comments along the way -- yydev-official 2026.
