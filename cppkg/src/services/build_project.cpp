@@ -108,7 +108,7 @@ void Build::build_project(const std::string& path) {
 
 /// well well well. What do we have here, an user in a hurry i see. 
 void Build::run_project(const std::string& path) {
-    SystemService shell_;
+    SystemService shell_; ///another shell? I thought turtles only had 1!
     auto toml = parse_toml(path + "/cppkg.toml");
     std::string name = toml.get("package", "name");
 
