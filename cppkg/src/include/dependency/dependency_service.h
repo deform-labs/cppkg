@@ -1,8 +1,7 @@
 #pragma once
+#include "../git/git_service.h"
 #include <string>
 #include <vector>
-#include "../git/git_service.h"
-#include "../turtle/turtle.h"
 
 struct Dependency {
     std::string name;
@@ -30,5 +29,4 @@ class DependencyService {
 
     private:
         GitService git_;
-        turtle shell_;
 };

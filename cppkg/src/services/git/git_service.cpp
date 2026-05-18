@@ -1,6 +1,7 @@
 #include "../../include/git/git_service.h"
 #include "../../include/turtle/turtle.h"
 #include "../../helpers/color.h"
+#include "../../the_shell.h"
 #include <filesystem>
 #include <iostream>
 

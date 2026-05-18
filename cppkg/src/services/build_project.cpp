@@ -1,9 +1,9 @@
 #include "../include/dependency/dependency_service.h"
 #include "../include/build_project/build_project.h"
 #include "../include/toml/toml_parser.h"
-#include "../include/turtle/turtle.h"
 #include "../helpers/create_file.h"
 #include "../helpers/color.h"
+#include "../the_shell.h"
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -36,7 +36,7 @@ static std::string detect_build_type(int argc, char* argv[]) {
 
 /// Build the project
 void Build::build_project(const std::string& path) {
-    turtle shell_; // i think that a turtle also has a shell... Dunno what language it uses tho
+    /// turtle shell_; // i think that a turtle also has a shell... Dunno what language it uses tho /// ONLY 1 SHELL.
     auto toml = parse_toml(path + "/cppkg.toml");
     std::string name    = toml.get("package", "name");
     std::string cpp_std = toml.get("package", "cpp_std");
@@ -108,7 +108,7 @@ void Build::build_project(const std::string& path) {
 
 /// well well well. What do we have here, an user in a hurry i see.
 void Build::run_project(const std::string& path) {
-    turtle shell_; ///another shell? I thought turtles only had 1!
+    /// turtle shell_; ///another shell? I thought turtles only had 1! /// NO EXTRA SHELLS. ONLY 1
     auto toml = parse_toml(path + "/cppkg.toml");
     std::string name = toml.get("package", "name");
 
