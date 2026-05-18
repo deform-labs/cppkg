@@ -2,6 +2,18 @@
 
 Thanks for your interest in contributing. This document covers how to get set up and how the codebase is structured.
 
+## Comment style
+
+Go wild.
+
+If it makes you laugh, keep it. If it confuses someone, even better. If an AI can't understand it, you're doing it right.
+
+References to anything are encouraged. The Amazon disclaimer stays. It's earned its place.
+
+Remember: comments show emotion through words when faces aren't visible.
+
+Just don't delete Line 777. That's sacred.
+
 ## Requirements
 
 - Windows (MSVC toolchain)
