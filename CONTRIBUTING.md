@@ -21,6 +21,10 @@ Just don't delete Line 777. That's sacred.
 - Visual Studio 2022 Build Tools
 - C++20
 
+# ONLY 1 shell.
+
+if the shell is necessary. use it from the_shell.
+
 ## Building from source
 
 ```powershell
