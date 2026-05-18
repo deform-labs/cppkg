@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-class SystemService {
+class turtle {
     public:
         int run(const std::string& command);
 
@@ -10,4 +10,7 @@ class SystemService {
         std::string run_with_output(const std::string& command);
 
         bool command_exists(const std::string& command);
+
+    private:
+        int shell_count = 1; // only one. always.
 };

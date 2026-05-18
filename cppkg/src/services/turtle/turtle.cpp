@@ -1,15 +1,15 @@
-#include "../../include/system/system.h"
+#include "../../include/turtle/turtle.h"
 #include <cstdlib>
 #include <cstdio>
 #include <array>
 
 /// JUST DO IT
-int SystemService::run(const std::string& command) {
+int turtle::run(const std::string& command) {
     return std::system(command.c_str());
 }
 
 /// shh mom will hear us
-int SystemService::run_quiet(const std::string& command) {
+int turtle::run_quiet(const std::string& command) {
     #ifdef _WIN32
         std::string cmd = command + " > nul 2>&1";
     #else
@@ -20,7 +20,7 @@ int SystemService::run_quiet(const std::string& command) {
 }
 
 /// mom heard us!
-std::string SystemService::run_with_output(const std::string& command) {
+std::string turtle::run_with_output(const std::string& command) {
     #ifdef _WIN32
         // Use _popen on Windows
         FILE* pipe = _popen(command.c_str(), "r");
@@ -46,11 +46,12 @@ std::string SystemService::run_with_output(const std::string& command) {
 }
 
 
-/// roses are red, violets are blue, we don't know what's best for these two.
-bool SystemService::command_exists(const std::string& command) {
+/// i cant find it!
+bool turtle::command_exists(const std::string& command) {
     #ifdef _WIN32
         return run_quiet("where " + command) == 0;
     #else
+        /// roses are red, violets are blue, we don't know what's best for these two.
         if (run_quiet("command -v " + command) == 0) return true;
         return run_quiet("which " + command) == 0;
     #endif

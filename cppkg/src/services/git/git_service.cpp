@@ -4,10 +4,10 @@
 #include <filesystem>
 #include <iostream>
 
-/// aliases here aliases there, are we ever going to stop using aliases? 
+/// aliases here aliases there, are we ever going to stop using aliases?
 namespace fs = std::filesystem;
 
-/// wooah https? 
+/// wooah https?
 GitService::GitService(bool use_https)
     : https_mode_(use_https) {}
 
@@ -90,7 +90,7 @@ bool GitService::validate_repo(const std::string& author, const std::string& rep
 }
 
 /// for beginners this saves the changes to github
-/// genuinely tho if you used git befoe you should know this
+/// genuinely tho if you used git before you should know this
 bool GitService::commit(const std::string& message) {
     if (!shell_.command_exists("git")) {
         std::cout << Color::green << "Git not found. Please install Git: https://git-scm.com/" << Color::reset << std::endl;

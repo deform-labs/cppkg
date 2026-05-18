@@ -1,5 +1,5 @@
 #pragma once
-#include "../system/system.h"
+#include "../turtle/turtle.h"
 #include <string>
 
 class GitService {
@@ -25,5 +25,5 @@ class GitService {
         bool push();
     private:
         bool https_mode_;
-        SystemService shell_;
+        turtle shell_;
 };

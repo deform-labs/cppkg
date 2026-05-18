@@ -9,38 +9,60 @@
 #include <iostream>
 
 
+/// dumbfuck if you cant understand ts
 void handle_error(const std::runtime_error& e) {
     std::cout << Color::red << e.what() << Color::reset << std::endl;
 }
 
-void check_args(int argc, int min_args, const std::string& usage) {
+/// ok so this one might need an explanation but it's pretty self-explanatory for amateurs :sunglasses:
+/// for dumbasses: it checks the amount of arguments against the minimum required
+void check_arguments(int argc, int min_args, const std::string& usage) {
     if (argc < min_args) {
         std::cout << Color::green << usage << Color::reset << "\n";
         exit(1);
     }
 }
 
+/// oh look mom a git commit integration!
+/// i commited war crimes. -- random dev in 2015
+void git_integr_commit(int argc, char* argv[]) {
+    check_arguments(argc, 4, "Usage: cppkg git commit <message>");
+    GitService git;
+    git.commit(argv[3]);
+}
+
+/// oh look mom a git push integration!
+/// i pushed an old lady down the stairs --same random man but now from 2004
+void git_integr_push(int argc, char* argv[]) {
+    GitService git;
+    /// The old lady? She never saw it coming.
+    git.push();
+}
+
+/// fucking destroys your copmuter if it fails.
+/// jk.
+void git_integr_fail(int argc, char* argv[]) {
+    std::cout << Color::red << "Unknown git command: " << argv[2] << Color::reset << std::endl;
+    exit(1);
+}
+
 /// oh look mom a git integration!
-void* git_integration(int argc, char* argv[]) {
-    check_args(argc, 3, "Usage: cppkg git <command>");
-    std::string sub = argv[2];
-    if (sub == "commit") {
-        check_args(argc, 4, "Usage: cppkg git commit <message>");
-        GitService git;
-        git.commit(argv[3]);
-    } else if (sub == "push") {
-        GitService git;
-        git.push();
+void git_integration(int argc, char* argv[]) {
+    check_arguments(argc, 3, "Usage: cppkg git <command>");
+    std::string argument = argv[2];
+
+    if (argument == "commit") {
+        git_integr_commit(argc, argv);
+    } else if (argument == "push") {
+        git_integr_push(argc, argv);
     } else {
-        std::cout << Color::red << "Unknown git command: " << sub << Color::reset << std::endl;
-        exit(1);
+        git_integr_fail(argc, argv);
     }
-    exit(0);
 }
 
 /*
- *  just adds base commands to the registry
- *  if you didnt already understand it idk whats in your brain
+ * just adds base commands to the registry
+ * if you didnt already understand it idk whats in your brain
  */
 void add_base_commands(CommandRegistry& registry) {
     Build build;
