@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include "../git/git_service.h"
-#include "../system/system.h"
+#include "../turtle/turtle.h"
 
 struct Dependency {
     std::string name;
@@ -30,5 +30,5 @@ class DependencyService {
 
     private:
         GitService git_;
-        SystemService shell_;
+        turtle shell_;
 };

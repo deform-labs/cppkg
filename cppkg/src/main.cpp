@@ -69,12 +69,12 @@ void add_base_commands(CommandRegistry& registry) {
     HandlePackage handlePackage;
 
     registry.addCommand(Command("init", "Initialize a new package", [&handlePackage](int argc, char* argv[]) {
-        check_args(argc, 3, "Usage: cppkg init <project-name>");
+        check_arguments(argc, 3, "Usage: cppkg init <project-name>");
         handlePackage.create_package(argv[2]);
     }));
 
     registry.addCommand(Command("add", "Add a dependency (author/repo@version)", [](int argc, char* argv[]) {
-        check_args(argc, 3, "Usage: cppkg add <author/repo>@<version>");
+        check_arguments(argc, 3, "Usage: cppkg add <author/repo>@<version>");
         bool https = false;
         std::string spec = argv[2];
         for (int i = 3; i < argc; ++i) {
@@ -88,7 +88,7 @@ void add_base_commands(CommandRegistry& registry) {
     }));
 
     registry.addCommand(Command("remove", "Remove a dependency", [](int argc, char* argv[]) {
-        check_args(argc, 3, "Usage: cppkg remove <author/repo>");
+        check_arguments(argc, 3, "Usage: cppkg remove <author/repo>");
         DependencyService deps;
         deps.remove(argv[2]);
     }));
@@ -147,10 +147,10 @@ void add_base_commands(CommandRegistry& registry) {
     }));
 
     registry.addCommand(Command("workspace", "Manage workspaces", [&handlePackage, &build](int argc, char* argv[]) {
-        check_args(argc, 3, "Usage: cppkg workspace <init|build> <name>");
+        check_arguments(argc, 3, "Usage: cppkg workspace <init|build> <name>");
         std::string sub = argv[2];
         if (sub == "init") {
-            check_args(argc, 4, "Usage: cppkg workspace init <name>");
+            check_arguments(argc, 4, "Usage: cppkg workspace init <name>");
             handlePackage.create_workspace(argv[3]);
         } else if (sub == "build") {
             if (argc >= 4) {
@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
     CommandRegistry registry;
     add_base_commands(registry);
 
-    check_args(argc, 2, "Usage: cppkg <command>");
+    check_arguments(argc, 2, "Usage: cppkg <command>");
 
     try {
         registry.executeCommand(argv[1], argc, argv);
