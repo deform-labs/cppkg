@@ -14,6 +14,7 @@ struct Workspace {
     std::vector<WorkspaceMember> members;
 };
 
+// load that motherfucker
 inline Workspace load_workspace(const std::string& root_path) {
     Workspace ws;
     ws.root = root_path;
