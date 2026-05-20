@@ -55,7 +55,7 @@ void* crash_pc_command(int argc, char* argv[]) {
     int* ptr = nullptr;
     *ptr = -1;
     return ptr;
-}; /// actually fucking destroys your pc
+}; /// actually fucking destroys your pc (doesnt do that obv it just segmentation faults)
 void* version_command(int argc, char* argv[]) {
     std::cout << Color::cyan << "cppkg version " << get_git_commit() << Color::reset << std::endl;
     return nullptr;
@@ -116,12 +116,37 @@ void* init_command(int argc, char* argv[]) {
     handlePackage.create_package(argv[2]);
     return nullptr;
 }; /// initialize this ahh
+
 void* git_command(int argc, char* argv[]) {
     check_arguments(argc, 3, "Usage: cppkg git <command>");
     std::string argument = argv[2];
+    std::string git_command_help = std::string("Git integration for cppkg. ") +
+        "\nUsage: cppkg git <command> \n" +
+        "NOTE: this is just a passthrough. no real functionality is in cppkg. \n" +
+        "meanwhile here is a list of available commands to use in cppkg git (NOT AN IMPLEMENTATION): \n" +
+        "   commit - save a change to github. \n" +
+        "          -m <message> - commit message. \n" +
+        "          -a - add all changes. \n" +
+        "          -v - verbose output. \n" +
+        "   push - push changes to github. for flags use git --help. \n" +
+        "   pull - pull changes from github. for flags use git --help. \n" +
+        "   status - show the status of the repository. for flags use git --help. \n" +
+        "   log - show the commit history. for flags use git --help. \n" +
+        "   branch - show the current branch. for flags use git --help. \n" +
+        "   checkout - switch to a different branch. for flags use git --help. \n" +
+        "   merge - merge changes from one branch to another. for flags use git --help. \n" +
+        "   add - add files to the staging area. for flags use git --help. \n" +
+        "   rm - remove files from the staging area. for flags use git --help. \n" +
+        "\n";
+    if (argument == "help") {
+        std::cout << Color::cyan << git_command_help;
+        std::cout << Color::reset << "\n";
+        return nullptr;
+    }
     shell_.run("git " + argument);
     return nullptr;
 }; /// oh look mom a git integration!
+
 void* add_command(int argc, char* argv[]) {
     bool https = false;
     std::string spec = argv[2];
@@ -150,15 +175,15 @@ void* run_command(int argc, char* argv[]) {
  */
 void INITIALIZE(CommandRegistry& registry) {
     //descending spiral. just how i like it.
-    registry.addCommand(Command("git", "github integration inside of cppkg!", git_command));
+    registry.addCommand(Command("crash", "crash the pc (JOKE. just crashes the executable.)", crash_pc_command));
     registry.addCommand(Command("clean", "Clean build artifacts and dependencies", clean_command));
     registry.addCommand(Command("add", "Add a dependency (author/repo@version)", add_command));
+    registry.addCommand(Command("git", "github integration inside of cppkg!", git_command));
     registry.addCommand(Command("version", "Print the version of cppkg", version_command));
-    registry.addCommand(Command("build", "Build the package", Build_command));
     registry.addCommand(Command("workspace", "Manage workspaces", workspace_command));
     registry.addCommand(Command("init", "Initialize a new package", init_command));
     registry.addCommand(Command("remove", "Remove a dependency", remove_command));
-    registry.addCommand(Command("crash", "crash the pc", crash_pc_command));
+    registry.addCommand(Command("build", "Build the package", Build_command));
     registry.addCommand(Command("run", "Run the package", run_command));
     registry.addCommand(Command("help", "Show help", help_command));
 }
