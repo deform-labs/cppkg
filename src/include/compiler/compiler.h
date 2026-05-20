@@ -13,7 +13,7 @@ public:
         std::vector<std::string> include_paths;
         std::vector<std::string> library_paths;
         std::vector<std::string> libraries;
-        bool verbose = false;
+        bool verbose = true;
         bool color_output = true;
         std::string cache_dir = ".cppkg/cache";  // This is fine here
         std::string build_dir = "build";
@@ -21,7 +21,9 @@ public:
         CompilerConfig() = default;
     };
 
-    explicit CompilerWrapper(const CompilerConfig& config = CompilerConfig());
+    explicit CompilerWrapper(const CompilerConfig& config);
+    // Constructors
+    CompilerWrapper();  // default constructor
 
     int compile(const std::string& source_file, const std::string& output_file = "");
     int compile_all(const std::vector<std::string>& source_files);

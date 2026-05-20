@@ -94,7 +94,7 @@ void Build::build_project(const std::string& path) {
 
     // finally it can NOT use cmake
     CompilerWrapper::CompilerConfig config;
-    config.compiler_path = "cl"; /// g-ing my ++
+    config.compiler_path = "g++"; /// g-ing my ++
     config.cpp_std = cpp_std;
     config.include_paths.push_back("src");
     config.verbose = true;

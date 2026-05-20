@@ -1,16 +1,20 @@
+/// WOAH A LOT OF INCLUDES! BETTER CALL THE TELLER TO COUNT THEM ALL! (jk i counted them myself)
 #include "include/handle_package/handle_package.h"
 #include "include/dependency/dependency_service.h"
 #include "include/build_project/build_project.h"
 #include "include/version/version.h"
 #include "helpers/color.h"
-#include "commands.h"
 #include "the_shell.h"
+#include "commands.h"
 #include <algorithm>
 #include <iostream>
 #include <cstdlib>
 #include <vector>
 #include <string>
 
+HandlePackage handlePackage;
+CommandRegistry registry;
+Build build;
 
 /// dumbfuck if you cant understand ts
 void handle_error(const std::runtime_error& e) {
@@ -82,8 +86,6 @@ void* Build_command(int argc, char* argv[]) {
     return nullptr;
 }; /// builds the project
 void* help_command(int argc, char* argv[]) {
-    CommandRegistry registry;
-
     std::cout << Color::green << "Usage: cppkg <command> <args>\n\n" << Color::reset;
     std::cout << Color::cyan << "Available commands:\n" << Color::reset;
 
@@ -110,7 +112,6 @@ void* help_command(int argc, char* argv[]) {
     return nullptr;
 }; /// helpp please!!!
 void* init_command(int argc, char* argv[]) {
-    HandlePackage handlePackage;
     check_arguments(argc, 3, "Usage: cppkg init <project-name>");
     handlePackage.create_package(argv[2]);
     return nullptr;
@@ -139,7 +140,6 @@ void* run_command(int argc, char* argv[]) {
     if (argc >= 3) {
         path = argv[2];
     }
-    Build build;
     build.run_project(path);
     return nullptr;
 }; /// runs the project
@@ -165,7 +165,6 @@ void INITIALIZE(CommandRegistry& registry) {
 
 /// just look it up in google if you dont know what this does.
 int main(int argc, char* argv[]) {
-    CommandRegistry registry;
     INITIALIZE(registry);
 
     check_arguments(argc, 2, "Usage: cppkg <command>");
