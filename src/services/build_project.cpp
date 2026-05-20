@@ -1,5 +1,6 @@
 #include "../include/dependency/dependency_service.h"
 #include "../include/build_project/build_project.h"
+#include "../include/compiler/compiler.h"
 #include "../include/toml/toml_parser.h"
 #include "../helpers/create_file.h"
 #include "../helpers/color.h"
@@ -24,7 +25,7 @@ void spinner(const std::string& label, std::atomic<bool>& done) {
     std::cout << "\r" << Color::green << "[OK] " << label << Color::reset << "    \n";
 };
 
-/// Detect the build type
+/// building by brick or by plaster?
 static std::string detect_build_type(int argc, char* argv[]) {
     for (int i = 2; i < argc; ++i) {
         std::string arg = argv[i];
@@ -34,27 +35,7 @@ static std::string detect_build_type(int argc, char* argv[]) {
     return "RelWithDebInfo";
 }
 
-/// Build the project
-void Build::build_project(const std::string& path) {
-    /// turtle shell_; // i think that a turtle also has a shell... Dunno what language it uses tho /// ONLY 1 SHELL.
-    auto toml = parse_toml(path + "/cppkg.toml");
-    std::string name    = toml.get("package", "name");
-    std::string cpp_std = toml.get("package", "cpp_std");
-
-    if (cpp_std.substr(0, 3) == "c++")
-        cpp_std = cpp_std.substr(3);
-
-    fs::path project_dir = fs::current_path() / path;
-    fs::current_path(project_dir);
-
-    DependencyService deps;
-    std::cout << Color::cyan << "Fetching dependencies..." << Color::reset << "\n";
-    if (!deps.fetch_all(".")) {
-        std::cout << Color::red << "Some dependencies failed to fetch" << Color::reset << "\n";
-    }
-
-    std::cout << Color::cyan << "Generating CMakeLists.txt..." << Color::reset << "\n";
-
+void create_lists(fs::path project_dir, std::string name, std::string cpp_std, DependencyService deps) {
     std::string cmake;
     cmake += "cmake_minimum_required(VERSION 3.10)\n";
     cmake += "project(" + name + ")\n\n";
@@ -78,33 +59,57 @@ void Build::build_project(const std::string& path) {
     cmake += ")\n";
 
     create_file("CMakeLists.txt", project_dir.string(), cmake);
+}
 
-    std::atomic<bool> done(false);
+/// building it brick by brick
+void Build::build_project(const std::string& path) {
+    auto toml = parse_toml(path + "/cppkg.toml");
+    std::string name = toml.get("package", "name");
+    std::string cpp_std = toml.get("package", "cpp_std");
 
-    std::thread t1(spinner, "Configuring: ", std::ref(done));
-    std::string build_type = detect_build_type(0, nullptr);
-    int r1 = shell_.run("cmake -B target/build -DCMAKE_BUILD_TYPE=" + build_type);
-    done = true;
-    t1.join();
+    if (cpp_std.substr(0, 3) == "c++")
+        cpp_std = cpp_std.substr(3);
 
-    if (r1 != 0) {
-        std::cout << Color::red << "Configuration failed!" << Color::reset << "\n";
-        return;
+    fs::path project_dir = fs::current_path() / path;
+    fs::current_path(project_dir);
+
+    // fetch dog fetch!
+    DependencyService deps;
+    std::cout << Color::cyan << "Fetching dependencies..." << Color::reset << "\n";
+    if (!deps.fetch_all(".")) {
+        std::cout << Color::red << "Some dependencies failed to fetch" << Color::reset << "\n";
     }
 
-    done = false;
-    std::thread t2(spinner, "Building: ", std::ref(done));
-    int r2 = shell_.run("cmake --build target/build");
-    done = true;
-    t2.join();
+    // source 2 pls valve i need this
+    std::vector<std::string> source_files;
+    for (const auto& entry : fs::recursive_directory_iterator("src")) {
+        if (entry.path().extension() == ".cpp") {
+            source_files.push_back(entry.path().string());
+        }
+    }
 
-    if (r2 != 0) {
-        std::cout << Color::red << "Build failed!" << Color::reset << "\n";
-        return;
+    if (source_files.empty()) {
+        throw std::runtime_error("No source files found in src/");
+    }
+
+    // finally it can NOT use cmake
+    CompilerWrapper::CompilerConfig config;
+    config.compiler_path = "cl"; /// g-ing my ++
+    config.cpp_std = cpp_std;
+    config.include_paths.push_back("src");
+    config.verbose = true;
+
+    CompilerWrapper compiler(config);
+
+    // compile that ass
+    int result = compiler.compile_all(source_files);
+    if (result != 0) {
+        throw std::runtime_error("Build failed!");
     }
 
     std::cout << Color::green << "Build successful: " << name << Color::reset << "\n";
 }
+
 
 /// well well well. What do we have here, an user in a hurry i see.
 void Build::run_project(const std::string& path) {

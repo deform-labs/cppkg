@@ -1,5 +1,6 @@
+# .clangd
 CompileFlags:
-    Add:
-        - -std=c++20
-        - -I./src/include
-        - -I./src/
+    Add: [-std=c++20]
+    Remove: [-Wno-*]
+Diagnostics:
+    Suppress: [default_member_initializer_not_yet_parsed]
