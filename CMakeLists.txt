@@ -13,5 +13,5 @@ file(GLOB_RECURSE SOURCES
 
 
 add_executable(cppkg ${SOURCES})
-target_include_directories(cppkg PRIVATE src/include src)
+target_include_directories(cppkg PRIVATE src)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

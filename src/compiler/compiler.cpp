@@ -1,6 +1,6 @@
-#include "../../include/compiler/compiler.h"
-#include "../../helpers/the_shell.h"
-#include "../../helpers/color.h"
+#include "../helpers/the_shell.h"
+#include "../helpers/color.h"
+#include "compiler.h"
 #include <filesystem>
 #include <algorithm>
 #include <iostream>

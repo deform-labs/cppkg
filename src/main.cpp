@@ -1,12 +1,12 @@
 /// WOAH A LOT OF INCLUDES! BETTER CALL THE TELLER TO COUNT THEM ALL! (jk i counted them myself)
-#include "include/handle_package/handle_package.h"
-#include "include/dependency/dependency_service.h"
-#include "include/build_project/build_project.h"
-#include "include/version/version.h"
+#include "dependency/dependency_service.h"
+#include "packages/handle_package.h"
+#include "build/build_project.h"
 #include "helpers/the_shell.h"
 #include "helpers/color.h"
 #include "commands.h"
 #include <algorithm>
+#include "version.h"
 #include <iostream>
 #include <cstdlib>
 #include <vector>

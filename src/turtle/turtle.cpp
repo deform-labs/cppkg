@@ -1,4 +1,4 @@
-#include "../../include/turtle/turtle.h"
+#include "turtle.h"
 #include <cstdlib>
 #include <cstdio>
 #include <array>

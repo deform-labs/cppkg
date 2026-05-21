@@ -1,7 +1,7 @@
-#include "../include/handle_package/handle_package.h"
-#include "../include/toml/toml_parser.h"
 #include "../helpers/create_file.h"
+#include "../toml/toml_parser.h"
 #include "../helpers/color.h"
+#include "handle_package.h"
 #include <filesystem>
 #include <iostream>
 
@@ -64,8 +64,8 @@ void HandlePackage::create_package(const std::string& name) {
     std::cout << Color::green << "Created package: " << name << Color::reset << "\n";
 }
 
-/// Create a workspace with the given name (NO SHIT SHERLOCK) 
-/// workspace? Arent you already working at one? 
+/// Create a workspace with the given name (NO SHIT SHERLOCK)
+/// workspace? Arent you already working at one?
 void HandlePackage::create_workspace(const std::string& name) {
     namespace fs = std::filesystem;
     fs::create_directories(name);

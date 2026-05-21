@@ -1,6 +1,6 @@
-#include "../../include/dependency/dependency_service.h"
-#include "../../include/toml/toml_parser.h"
-#include "../../helpers/color.h"
+#include "../toml/toml_parser.h"
+#include "dependency_service.h"
+#include "../helpers/color.h"
 #include <filesystem>
 #include <iostream>
 #include <fstream>
@@ -97,7 +97,7 @@ void DependencyService::remove(const std::string& name, const std::string& proje
     if (dep_section == std::string::npos)
         throw std::runtime_error("No [dependencies] section found");
 
-    // did you find the key? 
+    // did you find the key?
     std::string search;
 
     // ah tinder match
@@ -145,7 +145,7 @@ std::vector<Dependency> DependencyService::load_dependencies(const std::string& 
         auto toml = parse_toml(toml_path);
 
         if (!toml.has("dependencies", "")) {
-            // does dependencies have children? 
+            // does dependencies have children?
             auto it = toml.sections.find("dependencies");
             if (it == toml.sections.end())
                 return deps;

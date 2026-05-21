@@ -1,10 +1,10 @@
-#include "../include/dependency/dependency_service.h"
-#include "../include/build_project/build_project.h"
-#include "../include/compiler/compiler.h"
-#include "../include/toml/toml_parser.h"
+#include "../dependency/dependency_service.h"
+#include "../compiler/compiler.h"
+#include "../toml/toml_parser.h"
 #include "../helpers/create_file.h"
 #include "../helpers/the_shell.h"
 #include "../helpers/color.h"
+#include "build_project.h"
 #include <filesystem>
 #include <iostream>
 #include <string>
