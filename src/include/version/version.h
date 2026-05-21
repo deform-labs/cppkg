@@ -1,6 +1,6 @@
 #pragma once
+#include "../../helpers/the_shell.h"
 #include <string>
-#include "../../the_shell.h"
 
 /// get the day the guy committed war crimes.
 inline std::string get_git_commit() {

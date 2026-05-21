@@ -2,6 +2,7 @@
 [![CMake on multiple platforms](https://github.com/deform-labs/cppkg/actions/workflows/cmake-multi-platform.yml/badge.svg)](https://github.com/deform-labs/cppkg/actions/workflows/cmake-multi-platform.yml)
 [![CMake Hate](https://img.shields.io/badge/CMake-Hate-red)]()
 [![Uses Your Compiler](https://img.shields.io/badge/Compiler-Your%20Choice-brightgreen)]()
+[![Self-Hosting](https://img.shields.io/badge/Self--Hosting-Yes-brightgreen)]()
 > Cargo-inspired package manager for C++. Because manually creating `src/`, `CMakeLists.txt`, and `build/` for every project is hell.
 > also because i hate cmake.
  

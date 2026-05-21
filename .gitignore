@@ -1,8 +1,2 @@
-#self explanatory
-build/
-target/
-build_testing/
-#packages is hidden because it contains testing packages
-packages/
+builds/
 .cppkg/
-

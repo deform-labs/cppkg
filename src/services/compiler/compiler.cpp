@@ -1,38 +1,70 @@
 #include "../../include/compiler/compiler.h"
+#include "../../helpers/the_shell.h"
 #include "../../helpers/color.h"
-#include "../../the_shell.h"
+#include <filesystem>
+#include <algorithm>
 #include <iostream>
 #include <cstdlib>
 #include <chrono>
+#include <string>
 
 static bool is_msvc(const std::string& compiler_path) {
     std::string p = compiler_path;
-    for (auto& c : p) c = (char)tolower(c);
-    return (p == "cl" || p == "cl.exe" ||
-            (p.find("cl") != std::string::npos &&
-             p.find("g++") == std::string::npos &&
-             p.find("clang") == std::string::npos));
+
+    for (auto& c : p)
+        c = (char)tolower(c);
+
+    return (
+        p == "cl" ||
+        p == "cl.exe" ||
+        (
+            p.find("cl") != std::string::npos &&
+            p.find("g++") == std::string::npos &&
+            p.find("clang") == std::string::npos
+        )
+    );
+}
+
+static std::string quote(const std::string& s) {
+    return "\"" + s + "\"";
 }
 
 static std::string translate_flag(const std::string& flag, bool msvc) {
-    if (!msvc) return flag;
-    if (flag == "-Wall" || flag == "-Wextra") return "/W4";
-    if (flag == "-O2")  return "/O2";
-    if (flag == "-O0")  return "/Od";
-    if (flag == "-g")   return "/Zi";
-    if (flag == "-c")   return "/c";
-    if (flag.substr(0, 5) == "-std=") return "/std:" + flag.substr(5);
+    if (!msvc)
+        return flag;
+
+    if (flag == "-Wall" || flag == "-Wextra")
+        return "/W4";
+
+    if (flag == "-O2")
+        return "/O2";
+
+    if (flag == "-O0")
+        return "/Od";
+
+    if (flag == "-g")
+        return "/Zi";
+
+    if (flag == "-c")
+        return "/c";
+
+    if (flag.substr(0, 5) == "-std=")
+        return "/std:" + flag.substr(5);
+
     return flag;
 }
 
-CompilerWrapper::CompilerWrapper(const CompilerConfig& config) : config_(config) {
+CompilerWrapper::CompilerWrapper(const CompilerConfig& config)
+    : config_(config) {
     build_base_command();
 }
 
 void CompilerWrapper::build_base_command() {
     bool msvc = is_msvc(config_.compiler_path);
+
     build_command_.clear();
-    build_command_.push_back(config_.compiler_path);
+
+    build_command_.push_back(quote(config_.compiler_path));
 
     if (msvc) {
         build_command_.push_back("/std:c++17");
@@ -43,8 +75,10 @@ void CompilerWrapper::build_base_command() {
     }
 
     std::vector<std::string> seen;
+
     for (const auto& flag : config_.default_flags) {
         std::string translated = translate_flag(flag, msvc);
+
         if (std::find(seen.begin(), seen.end(), translated) == seen.end()) {
             build_command_.push_back(translated);
             seen.push_back(translated);
@@ -52,13 +86,18 @@ void CompilerWrapper::build_base_command() {
     }
 
     for (const auto& path : config_.include_paths) {
-        build_command_.push_back(msvc ? "/I" + path : "-I" + path);
+        if (msvc) {
+            build_command_.push_back("/I" + quote(path));
+        } else {
+            build_command_.push_back(std::string("-I") + " " + path);
+        }
     }
 
     if (!msvc) {
         for (const auto& path : config_.library_paths) {
             build_command_.push_back("-L" + path);
         }
+
         for (const auto& lib : config_.libraries) {
             build_command_.push_back("-l" + lib);
         }
@@ -71,79 +110,143 @@ void CompilerWrapper::add_flag(const std::string& flag) {
 
 std::string CompilerWrapper::get_file_hash(const std::string& filename) {
     std::string command;
+
     #ifdef _WIN32
-        command = "certutil -hashfile \"" + filename + "\" MD5 | findstr /v \"MD5\"";
+        command =
+            "certutil -hashfile " +
+            quote(filename) +
+            " MD5 | findstr /v \"MD5\"";
     #else
-        command = "md5sum \"" + filename + "\" | cut -d' ' -f1";
+        command =
+            "md5sum " +
+            quote(filename) +
+            " | cut -d' ' -f1";
     #endif
+
     std::string result = shell_.run_with_output(command);
-    if (result.empty()) return result;
+
+    if (result.empty())
+        return result;
+
     result.erase(result.find_last_not_of(" \n\r\t") + 1);
+
     return result;
 }
 
 bool CompilerWrapper::check_cache(const std::string& source, const std::string& output) {
-    if (config_.cache_dir.empty()) return false;
+    if (config_.cache_dir.empty())
+        return false;
+
     std::filesystem::create_directories(config_.cache_dir);
+
     std::string source_hash = get_file_hash(source);
-    std::string cache_file = config_.cache_dir + "/" + source_hash;
-    if (std::filesystem::exists(cache_file) && std::filesystem::exists(output)) {
-        auto cache_time = std::filesystem::last_write_time(cache_file);
-        auto source_time = std::filesystem::last_write_time(source);
+
+    std::string cache_file =
+        config_.cache_dir + "/" + source_hash;
+
+    if (
+        std::filesystem::exists(cache_file) &&
+        std::filesystem::exists(output)
+    ) {
+        auto cache_time =
+            std::filesystem::last_write_time(cache_file);
+
+        auto source_time =
+            std::filesystem::last_write_time(source);
+
         if (cache_time > source_time) {
-            if (config_.verbose) std::cout << "Cache hit for " << source << std::endl;
+            if (config_.verbose) {
+                std::cout
+                    << "Cache hit for "
+                    << source
+                    << std::endl;
+            }
+
             return true;
         }
     }
+
     return false;
 }
 
+/// i wonder what this does bro
 void CompilerWrapper::store_cache(const std::string& source, const std::string& output) {
-    if (config_.cache_dir.empty()) return;
+    if (config_.cache_dir.empty())
+        return;
+
     std::string source_hash = get_file_hash(source);
-    std::string cache_file = config_.cache_dir + "/" + source_hash;
+
+    std::string cache_file =
+        config_.cache_dir + "/" + source_hash;
+
     std::error_code ec;
+
     std::filesystem::copy_file(output, cache_file,
-        std::filesystem::copy_options::overwrite_existing, ec);
+        std::filesystem::copy_options::overwrite_existing, ec
+    );
 }
 
+/// ru serious right now?
 int CompilerWrapper::compile(const std::string& source_file, const std::string& output_file) {
     if (!std::filesystem::exists(source_file)) {
-        std::cerr << "Error: Source file " << source_file << " does not exist!" << std::endl;
+        std::cerr << Color::red << "Error: Source file " << source_file << " does not exist!"
+                  << Color::reset << std::endl;
+
         return 1;
     }
 
     bool msvc = is_msvc(config_.compiler_path);
 
     std::string obj_file = output_file;
+
     if (obj_file.empty()) {
         std::string filename = source_file;
+
         auto slash = filename.find_last_of("/\\");
-        if (slash != std::string::npos) filename = filename.substr(slash + 1);
+
+        if (slash != std::string::npos)
+            filename = filename.substr(slash + 1);
+
         auto dot = filename.find_last_of('.');
-        if (dot != std::string::npos) filename = filename.substr(0, dot);
-        obj_file = config_.build_dir + "/" + filename + (msvc ? ".obj" : ".o");
+
+        if (dot != std::string::npos)
+            filename = filename.substr(0, dot);
+
+        obj_file =
+            config_.build_dir +
+            "/" +
+            filename +
+            (msvc ? ".obj" : ".o");
     }
 
-    if (check_cache(source_file, obj_file)) return 0;
+    if (check_cache(source_file, obj_file))
+        return 0;
 
-    if (config_.verbose) std::cout << Color::cyan << "Compiling: " << source_file << "..." << Color::reset << std::endl;
+    if (config_.verbose) {
+        std::cout << Color::yellow << "[Compiling] -> " << source_file << "..." << Color::reset << std::endl;
+    }
 
     std::string command_str;
+
+    command_str += config_.compiler_path;
+    command_str += "\"";
+
     for (const auto& part : build_command_) {
-        command_str += part + " ";
+        command_str += " " + std::string(part) + " ";
     }
-
     if (msvc) {
-        command_str += "/c ";
-        command_str += "\"" + source_file + "\" ";
-        command_str += "/Fo\"" + obj_file + "\"";
-
+        command_str += "/c " + source_file + " ";
+        command_str += "/Fo" + obj_file;
     } else {
-        command_str += "-c \"" + source_file + "\" -o \"" + obj_file + "\"";
+        command_str += " -c " + source_file + " -o " + obj_file;
     }
 
-    int result = std::system(command_str.c_str());
+
+    if (config_.verbose) {
+        std::cout << Color::cyan << "COMMAND: " << quote(command_str) << Color::reset << std::endl;
+    }
+
+    int result = shell_.run(/* std::string("sudo ") + */ quote(command_str).c_str());
 
     if (result == 0 && !config_.cache_dir.empty()) {
         store_cache(source_file, obj_file);
@@ -152,10 +255,14 @@ int CompilerWrapper::compile(const std::string& source_file, const std::string& 
     return result;
 }
 
+/// (⌐■_■)
 int CompilerWrapper::compile_all(const std::vector<std::string>& source_files) {
     bool msvc = is_msvc(config_.compiler_path);
+
     int total_errors = 0;
     int compiled = 0;
+    int linked = 0;
+
     std::vector<std::string> obj_files;
 
     std::filesystem::create_directories(config_.build_dir);
@@ -164,60 +271,102 @@ int CompilerWrapper::compile_all(const std::vector<std::string>& source_files) {
 
     for (const auto& source : source_files) {
         if (config_.verbose) {
-            std::cout << "[" << (compiled + 1) << "/" << source_files.size()
-                      << "] Processing " << source << "..." << std::endl;
+            std::cout << Color::cyan << "[" << (compiled + 1) << "/" << source_files.size() << "]"
+                      << " Processing " << source << "..." << std::endl;
         }
 
         std::string filename = source;
+
         auto slash = filename.find_last_of("/\\");
-        if (slash != std::string::npos) filename = filename.substr(slash + 1);
+
+        if (slash != std::string::npos)
+            filename = filename.substr(slash + 1);
+
         auto dot = filename.find_last_of('.');
-        if (dot != std::string::npos) filename = filename.substr(0, dot);
+
+        if (dot != std::string::npos)
+            filename = filename.substr(0, dot);
+
         std::string obj = config_.build_dir + "/" + filename + (msvc ? ".obj" : ".o");
 
         int result = compile(source, obj);
+
         if (result != 0) {
             total_errors++;
-            if (config_.verbose) std::cerr << "Failed to compile " << source << std::endl;
+
+            if (config_.verbose) {
+                std::cerr << Color::red << "Failed to compile -> " << source << Color::reset << std::endl;
+            }
         } else {
             obj_files.push_back(obj);
         }
+
         compiled++;
     }
 
     if (total_errors == 0 && !obj_files.empty()) {
-        if (config_.verbose) std::cout << "Linking..." << std::endl;
+        if (config_.verbose) {
+            std::cout << Color::yellow << "[" << (linked + 1) <<  "]" << "Linking..." << Color::reset << std::endl;
+        }
 
         std::string exe_name = config_.output_name.empty() ? "program" : config_.output_name;
+
         std::string out_path = config_.build_dir + "/" + exe_name + (msvc ? ".exe" : "");
 
         std::string link_cmd;
+
         if (msvc) {
-            link_cmd = "link /nologo /OUT:\"" + out_path + "\"";
-            for (const auto& lib : config_.libraries) link_cmd += " " + lib + ".lib";
-            for (const auto& obj : obj_files) link_cmd += " \"" + obj + "\"";
+            link_cmd = "link /nologo /OUT:" + quote(out_path);
+
+            for (const auto& lib : config_.libraries) {
+                link_cmd += " " + lib + ".lib";
+            }
+
+            for (const auto& obj : obj_files) {
+                link_cmd += " " + quote(obj);
+            }
         } else {
-            link_cmd = config_.compiler_path;
-            for (const auto& obj : obj_files) link_cmd += " \"" + obj + "\"";
-            for (const auto& path : config_.library_paths) link_cmd += " -L" + path;
-            for (const auto& lib : config_.libraries) link_cmd += " -l" + lib;
-            link_cmd += " -o \"" + out_path + "\"";
+            link_cmd = quote(config_.compiler_path);
+
+            for (const auto& obj : obj_files) {
+                link_cmd += " " + quote(obj);
+            }
+
+            for (const auto& path : config_.library_paths) {
+                link_cmd += " -L" + quote(path);
+            }
+
+            for (const auto& lib : config_.libraries) {
+                link_cmd += " -l" + lib;
+            }
+
+            link_cmd += " -o " + quote(out_path);
         }
 
-        int link_result = std::system(link_cmd.c_str());
+        if (config_.verbose) {
+            std::cout << Color::cyan << "LINK COMMAND: " << link_cmd << Color::reset << std::endl;
+        }
+
+        int link_result =
+            shell_.run_quiet(link_cmd.c_str());
+
         if (link_result != 0) {
-            std::cerr << "Linking failed!" << std::endl;
+            std::cerr << Color::red << "Linking failed!" << Color::reset << std::endl;
+
             total_errors++;
         }
     }
 
     auto end_time = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
 
-    std::cout << "\nCompilation complete: "
-              << (source_files.size() - total_errors) << " succeeded, "
-              << total_errors << " failed in " << duration.count() << "ms"
-              << std::endl;
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_time - start_time
+    );
+
+    std::cout << Color::cyan << "\nCompilation complete: " << Color::reset
+        << (source_files.size() - total_errors) << " succeeded, "
+        << total_errors << " failed in " << duration.count() << "ms"
+        << std::endl;
 
     return total_errors;
 }

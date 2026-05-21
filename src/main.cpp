@@ -3,8 +3,8 @@
 #include "include/dependency/dependency_service.h"
 #include "include/build_project/build_project.h"
 #include "include/version/version.h"
+#include "helpers/the_shell.h"
 #include "helpers/color.h"
-#include "the_shell.h"
 #include "commands.h"
 #include <algorithm>
 #include <iostream>
@@ -21,7 +21,7 @@ void handle_error(const std::runtime_error& e) {
     std::cout << Color::red << e.what() << Color::reset << std::endl;
 }
 
-/// ok so this one might need an explanation but it's pretty self-explanatory for amateurs :sunglasses:
+/// ok so this one might need an explanation but it's pretty self-explanatory for amateurs B)
 /// for dumbasses: it checks the amount of arguments against the minimum required
 void check_arguments(int argc, int min_args, const std::string& usage) {
     if (argc < min_args) {

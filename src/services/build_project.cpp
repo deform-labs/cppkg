@@ -3,8 +3,8 @@
 #include "../include/compiler/compiler.h"
 #include "../include/toml/toml_parser.h"
 #include "../helpers/create_file.h"
+#include "../helpers/the_shell.h"
 #include "../helpers/color.h"
-#include "../the_shell.h"
 #include <filesystem>
 #include <iostream>
 #include <string>
