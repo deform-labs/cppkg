@@ -35,6 +35,7 @@ static std::string detect_build_type(int argc, char* argv[]) {
     return "RelWithDebInfo";
 }
 
+/// i have to for compatibility and for users whole just prefer cmake :|
 void create_lists(fs::path project_dir, std::string name, std::string cpp_std, DependencyService deps) {
     std::string cmake;
     cmake += "cmake_minimum_required(VERSION 3.10)\n";
