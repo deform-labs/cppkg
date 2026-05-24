@@ -3,14 +3,27 @@
 [![CMake Hate](https://img.shields.io/badge/CMake-Hate-red)]()
 [![Uses Your Compiler](https://img.shields.io/badge/Compiler-Your%20Choice-brightgreen)]()
 [![Self-Hosting](https://img.shields.io/badge/Self--Hosting-Yes-brightgreen)]()
-> Cargo-inspired package manager for C++. Because manually creating `src/`, `CMakeLists.txt`, and `build/` for every project is hell.
-> also because i hate cmake.
+### Cargo-inspired package manager for C++. Because manually creating `src/`, `CMakeLists.txt`, and `build/` for every project is hell.
+### also because i hate cmake.
  
-Cross-platform, self-hosting, and with Git out of the box.
+### Cross-platform, self-hosting, and with Git out of the box.
 
 ## ALL COMMENTS IN THE FILES ARE ALL WRITTEN BY HUMANS!
+
+## About AI generated code.
+> i've always thought that ai code generation was a good idea, but i've always been skeptical about the quality of the code it produces.
+> since cppkg is a really hard to develop project, i wanted to make sure that the code it generates is of high quality.
+> and so i've decided to put all AI prompts for the AI generated code here, so you can see exactly what cppkg devs are asking the AI to generate.
+> this doesnt mean the project is vibe coded, it just means AI was part of the development process.
+
+
+>> please if youre interested review these chats to see the ai code generation process.
+
+[DEEPSEEK](https://chat.deepseek.com/share/jvd8m4jsh0izxpvssu)
+
+[CLAUDE](https://claude.ai/share/9d3617b1-bf39-4b5d-a8e9-257e42e7f4a3)
+
 ## Features
- 
 - `cppkg init` — scaffold a new C++ project in seconds
 - `cppkg add author/repo@version` — fetch dependencies directly from GitHub
 - `cppkg build` — generate CMakeLists, fetch deps, and compile
