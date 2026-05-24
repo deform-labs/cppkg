@@ -5,6 +5,7 @@
 #include "../helpers/the_shell.h"
 #include "../helpers/color.h"
 #include "build_project.h"
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -49,7 +50,7 @@ void create_lists(fs::path project_dir, std::string name, std::string cpp_std, D
     for (const auto& dep : dependencies) {
         cmake += "add_subdirectory(target/deps/" + dep.repo + ")\n";
         has_add_subdirectory = true;
-     }
+    }
     if (has_add_subdirectory) cmake += "\n";
 
     cmake += "add_executable(" + name + " ${SOURCES})\n";
@@ -62,26 +63,17 @@ void create_lists(fs::path project_dir, std::string name, std::string cpp_std, D
     create_file("CMakeLists.txt", project_dir.string(), cmake);
 }
 
-/// building it brick by brick
-void Build::build_project(const std::string& path) {
-    auto toml = parse_toml(path + "/cppkg.toml");
-    std::string name = toml.get("package", "name");
-    std::string cpp_std = toml.get("package", "cpp_std");
 
-    if (cpp_std.substr(0, 3) == "c++")
-        cpp_std = cpp_std.substr(3);
 
-    fs::path project_dir = fs::current_path() / path;
-    fs::current_path(project_dir);
-
-    // fetch dog fetch!
+void get_deps() {
     DependencyService deps;
     std::cout << Color::cyan << "Fetching dependencies..." << Color::reset << "\n";
     if (!deps.fetch_all(".")) {
         std::cout << Color::red << "Some dependencies failed to fetch" << Color::reset << "\n";
     }
+}
 
-    // source 2 pls valve i need this
+std::vector<std::string> get_source_files() {
     std::vector<std::string> source_files;
     for (const auto& entry : fs::recursive_directory_iterator("src")) {
         if (entry.path().extension() == ".cpp") {
@@ -92,6 +84,17 @@ void Build::build_project(const std::string& path) {
     if (source_files.empty()) {
         throw std::runtime_error("No source files found in src/");
     }
+
+    return source_files;
+}
+
+CompilerWrapper::CompilerConfig get_compiler_config(const std::string& path) {
+    auto toml = parse_toml(path + "/cppkg.toml");
+    std::string name = toml.get("package", "name");
+    std::string cpp_std = toml.get("package", "cpp_std");
+
+    if (cpp_std.substr(0, 3) == "c++")
+        cpp_std = cpp_std.substr(3);
 
     // finally it can NOT use cmake
     CompilerWrapper::CompilerConfig config;
@@ -123,8 +126,24 @@ void Build::build_project(const std::string& path) {
 
     config.output_name = name;
     config.cpp_std = cpp_std;
-    config.verbose = true;
     config.color_output = true;
+
+    return config;
+}
+
+/// building it brick by brick
+void Build::build_project(const std::string& path) {
+    fs::path project_dir = fs::current_path() / path;
+    fs::current_path(project_dir);
+
+    // fetch dog fetch!
+    get_deps();
+
+    // source 2 pls valve i need this
+    std::vector<std::string> source_files = get_source_files();
+
+    // finally it can NOT use cmake
+    CompilerWrapper::CompilerConfig config = get_compiler_config(path);
 
     CompilerWrapper compiler(config);
 
@@ -134,7 +153,7 @@ void Build::build_project(const std::string& path) {
         throw std::runtime_error("Build failed!");
     }
 
-    std::cout << Color::green << "Build successful: " << name << Color::reset << "\n";
+    std::cout << Color::green << "Build successful: " << config.output_name << Color::reset << "\n";
 }
 
 

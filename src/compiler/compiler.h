@@ -13,7 +13,7 @@ public:
         std::vector<std::string> include_paths;
         std::vector<std::string> library_paths;
         std::vector<std::string> libraries;
-        bool verbose = true;
+        bool verbose = false;
         bool color_output = true;
         std::string cache_dir = ".cppkg/cache";  // This is fine here
         std::string build_dir = "build";
