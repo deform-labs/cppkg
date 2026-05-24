@@ -95,10 +95,36 @@ void Build::build_project(const std::string& path) {
 
     // finally it can NOT use cmake
     CompilerWrapper::CompilerConfig config;
-    config.compiler_path = "g++"; /// g-ing my ++
+
+    // compiler avenue 69
+    if (toml.has("package", "compiler")) {
+        config.compiler_path = toml.get("package", "compiler");
+    } else {
+        #ifdef _WIN32
+            config.compiler_path = "cl";
+        #else
+            config.compiler_path = "g++";
+        #endif
+    }
+
+    // include road 104
+    if (toml.has("compiler", "IncludePaths")) {
+        auto paths = toml.parse_array(toml.get("compiler", "IncludePaths"));
+        for (const auto& Array_path : paths)
+            config.include_paths.push_back(Array_path);
+    }
+
+    // flags
+    if (toml.has("compiler", "compiler_flags")) {
+        auto flags = toml.parse_array(toml.get("compiler", "Compiler_Flags"));
+        for (const auto& flag : flags)
+            config.default_flags.push_back(flag);
+    }
+
+    config.output_name = name;
     config.cpp_std = cpp_std;
-    config.include_paths.push_back("src");
     config.verbose = true;
+    config.color_output = true;
 
     CompilerWrapper compiler(config);
 

@@ -31,10 +31,10 @@ void check_arguments(int argc, int min_args, const std::string& usage) {
 }
 
 /// OOH COMMANDS OHHH
-void* workspace_command(int argc, char* argv[]) {
-    Build build;
-    HandlePackage handlePackage;
+/// Had to fix these comments because on github they looked off :|
 
+/// workspaces everywhere employment for everbody!
+void* workspace_command(int argc, char* argv[]) {
     check_arguments(argc, 3, "Usage: cppkg workspace <init|build> <name>");
     std::string sub = argv[2];
 
@@ -50,22 +50,30 @@ void* workspace_command(int argc, char* argv[]) {
     }
 
     return nullptr;
-}; /// workspaces everywhere employment for everbody!
+};
+
+/// actually fucking destroys your pc (doesnt do that obv it just segmentation faults)
 void* crash_pc_command(int argc, char* argv[]) {
     int* ptr = nullptr;
     *ptr = -1;
     return ptr;
-}; /// actually fucking destroys your pc (doesnt do that obv it just segmentation faults)
+};
+
+/// commit number WHAT?
 void* version_command(int argc, char* argv[]) {
     std::cout << Color::cyan << "cppkg version " << get_git_commit() << Color::reset << std::endl;
     return nullptr;
-}; /// commit number WHAT?
+};
+
+/// remove command lmao ima remove this spike from your ass
 void* remove_command(int argc, char* argv[]) {
     std::string name = argv[2];
     DependencyService deps;
     deps.remove(name);
     return nullptr;
-}; /// remove command lmao ima remove this spike from your ass
+};
+
+/// cleans yo buh hole
 void* clean_command(int argc, char* argv[]) {
     std::string path = ".";
     if (argc >= 3) {
@@ -75,7 +83,9 @@ void* clean_command(int argc, char* argv[]) {
     deps.clean(path);
     std::cout << Color::green << "Cleaned build/target" << Color::reset << "\n";
     return nullptr;
-}; /// cleans yo buh hole
+};
+
+/// builds the project
 void* Build_command(int argc, char* argv[]) {
     std::string path = ".";
     if (argc >= 3) {
@@ -84,7 +94,9 @@ void* Build_command(int argc, char* argv[]) {
     Build build;
     build.build_project(path);
     return nullptr;
-}; /// builds the project
+};
+
+/// helpp please!!!
 void* help_command(int argc, char* argv[]) {
     std::cout << Color::green << "Usage: cppkg <command> <args>\n\n" << Color::reset;
     std::cout << Color::cyan << "Available commands:\n" << Color::reset;
@@ -110,13 +122,16 @@ void* help_command(int argc, char* argv[]) {
 
     std::cout << "\n";
     return nullptr;
-}; /// helpp please!!!
+};
+
+/// initialize this ahh
 void* init_command(int argc, char* argv[]) {
     check_arguments(argc, 3, "Usage: cppkg init <project-name>");
     handlePackage.create_package(argv[2]);
     return nullptr;
-}; /// initialize this ahh
+};
 
+/// oh look mom a git integration!
 void* git_command(int argc, char* argv[]) {
     check_arguments(argc, 3, "Usage: cppkg git <command>");
     std::string argument = argv[2];
@@ -145,8 +160,9 @@ void* git_command(int argc, char* argv[]) {
     }
     shell_.run("git " + argument);
     return nullptr;
-}; /// oh look mom a git integration!
+};
 
+/// add command lmao ima add this spike up your ass
 void* add_command(int argc, char* argv[]) {
     bool https = false;
     std::string spec = argv[2];
@@ -159,7 +175,9 @@ void* add_command(int argc, char* argv[]) {
     DependencyService deps(https);
     deps.add(spec);
     return nullptr;
-}; /// add command lmao ima add this spike up your ass
+};
+
+/// runs the project
 void* run_command(int argc, char* argv[]) {
     std::string path = ".";
     if (argc >= 3) {
@@ -167,7 +185,8 @@ void* run_command(int argc, char* argv[]) {
     }
     build.run_project(path);
     return nullptr;
-}; /// runs the project
+};
+
 
 /*
  * just adds base commands to the registry

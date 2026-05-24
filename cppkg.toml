@@ -2,5 +2,11 @@
 name = "cppkg"
 version = "0.4.0"
 cpp_std = "c++c23"
+compiler = "cl"
+
+[compiler]
+IncludePaths = ["src"]
+Compiler_Flags = []
 
 [dependencies]
+glfw/glfw = "master"

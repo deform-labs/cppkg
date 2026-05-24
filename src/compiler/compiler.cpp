@@ -228,9 +228,6 @@ int CompilerWrapper::compile(const std::string& source_file, const std::string& 
 
     std::string command_str;
 
-    command_str += config_.compiler_path;
-    command_str += "\"";
-
     for (const auto& part : build_command_) {
         command_str += " " + std::string(part) + " ";
     }
@@ -255,7 +252,7 @@ int CompilerWrapper::compile(const std::string& source_file, const std::string& 
     return result;
 }
 
-/// (⌐■_■)
+/// gotta compile em all (⌐■_■)
 int CompilerWrapper::compile_all(const std::vector<std::string>& source_files) {
     bool msvc = is_msvc(config_.compiler_path);
 
@@ -347,16 +344,20 @@ int CompilerWrapper::compile_all(const std::vector<std::string>& source_files) {
             std::cout << Color::cyan << "LINK COMMAND: " << link_cmd << Color::reset << std::endl;
         }
 
-        int link_result =
-            shell_.run_quiet(link_cmd.c_str());
-
+        /*
+         * had to use ai to check if this is correct because im a dumbass
+         */
+        int link_result = shell_.run_quiet(link_cmd);
         if (link_result != 0) {
-            std::cerr << Color::red << "Linking failed!" << Color::reset << std::endl;
-
+            std::string err = shell_.run_with_output(link_cmd);
+            std::cerr << Color::red << "Linking failed!\n" << err << Color::reset << std::endl;
             total_errors++;
         }
     }
 
+    /*
+     * had to use ai here, wanted to add the compilation time thing but i couldn't figure it out
+     */
     auto end_time = std::chrono::steady_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(

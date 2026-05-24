@@ -25,6 +25,16 @@ std::string GitService::dep_path(const std::string& repo, const std::string& bas
     return base + "/" + repo;
 }
 
+// get that assh
+std::string GitService::get_commit_hash(const std::string& repo_path) {
+    std::string cmd = "git -C \"" + repo_path + "\" rev-parse --short HEAD";
+    std::string out = shell_.run_with_output(cmd);
+    // trim that assh
+    while (!out.empty() && (out.back() == '\n' || out.back() == '\r' || out.back() == ' '))
+        out.pop_back();
+    return out;
+}
+
 /// clone that ass
 bool GitService::clone(const std::string& author, const std::string& repo, const std::string& tag) {
     std::string dest = dep_path(repo, "target/deps");

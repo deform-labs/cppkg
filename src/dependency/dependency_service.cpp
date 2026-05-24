@@ -1,5 +1,7 @@
 #include "../toml/toml_parser.h"
 #include "dependency_service.h"
+#include "../git/git_service.h"
+#include "../lock/lock_file.h"
 #include "../helpers/color.h"
 #include <filesystem>
 #include <iostream>
@@ -171,12 +173,12 @@ std::vector<Dependency> DependencyService::load_dependencies(const std::string& 
 /// shall we fetch all your dependencies sir?
 bool DependencyService::fetch_all(const std::string& project_root) {
     auto deps = load_dependencies(project_root);
-    if (deps.empty()) {
-        return true; // lil dog didnt find the ball :sob:
-    }
+    if (deps.empty()) return true;
 
     bool all_ok = true;
     fs::current_path(project_root);
+
+    LockFile lock(project_root + "/cppkg.lock");  // add this
 
     for (const auto& dep : deps) {
         std::string dest = GitService::dep_path(dep.repo, "target/deps");
@@ -189,6 +191,11 @@ bool DependencyService::fetch_all(const std::string& project_root) {
         if (!git_.clone(dep.author, dep.repo, dep.version)) {
             std::cout << Color::red << "Failed to fetch: " << dep.name << Color::reset << "\n";
             all_ok = false;
+        } else {
+            // write to lockfile after successful clone
+            std::string hash = git_.get_commit_hash(dest);
+            lock.upsert(dep.name, dep.version, hash);
+            std::cout << Color::cyan << "Locked: " << dep.name << " # " << hash << Color::reset << "\n";
         }
     }
 

@@ -17,6 +17,9 @@ class GitService {
         /// Returns the path to the cloned repository
         static std::string dep_path(const std::string& repo, const std::string& base = "target");
 
+        /// Returns the commit hash of the given repository
+        std::string get_commit_hash(const std::string& repo_path);
+
         /// Commits the changes with the given message
         bool commit(const std::string& message);
 
