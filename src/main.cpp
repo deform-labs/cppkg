@@ -114,10 +114,10 @@ void* help_command(int argc, char* argv[]) {
     }
 
     /// I CHOOSE DEATH!
-    for (const Command& cmd : commands) {
-        std::string name = Color::yellow + cmd.name + Color::reset;
-        std::string desc = " - " + cmd.description + "\n";
-        std::cout << "   " << name << desc;
+    for (const Command& cmd : registry.commands) {
+        std::string padding(max_len - cmd.name.size() + 2, ' ');
+        std::cout << "   " << Color::yellow << cmd.name << Color::reset
+                << padding << "- " << cmd.description << "\n";
     }
 
     std::cout << "\n";
