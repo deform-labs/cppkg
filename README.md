@@ -21,16 +21,18 @@
 
 [DEEPSEEK](https://chat.deepseek.com/share/jvd8m4jsh0izxpvssu)
 
-[CLAUDE](https://claude.ai/share/9d3617b1-bf39-4b5d-a8e9-257e42e7f4a3)
+[CLAUDE](https://claude.ai/share/9d3617b1-bf39-4b5d-a8e9-257e42e7f4a3) (requires login) 
 
 ## Features
 - `cppkg init` — scaffold a new C++ project in seconds
 - `cppkg add author/repo@version` — fetch dependencies directly from GitHub
-- `cppkg build` — generate CMakeLists, fetch deps, and compile
+- `cppkg build` — fetches dependencies, and compiles. 
 - `cppkg clean` — remove build artifacts and cloned dependencies
 - Workspace support — manage multiple packages under one root
 - SSH with HTTPS fallback for dependency cloning
 - Cross-platform — Windows (MSVC), Linux (GCC, Clang)
+
+> **NOTE** cppkg has cmakelists generation support for all cmake freaks out there
 ## Installation
  
 ### From release
