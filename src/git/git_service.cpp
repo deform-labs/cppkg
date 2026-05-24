@@ -219,16 +219,16 @@ bool GitService::publish(const std::string& version, const std::string& message,
 
     // step 5: create github release via api
     std::cout << Color::cyan << "Creating GitHub release..." << Color::reset << "\n";
-    std::string body = "{\"tag_name\":\"v" + version + "\","
-                       "\"name\":\"v" + version + "\","
-                       "\"body\":\"" + message + "\"}";
+    std::string body = "{\\\"tag_name\\\":\\\"v" + version + "\\\","
+                   "\\\"name\\\":\\\"v" + version + "\\\","
+                   "\\\"body\\\":\\\"" + message + "\\\"}";
 
     std::string curl_cmd =
         "curl -s -X POST "
         "https://api.github.com/repos/" + owner + "/" + repo + "/releases "
         "-H \"Authorization: token " + token + "\" "
         "-H \"Content-Type: application/json\" "
-        "-d '" + body + "'";
+        "-d \"" + body + "\"";
 
     std::string response = shell_.run_with_output(curl_cmd);
 
