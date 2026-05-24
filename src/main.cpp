@@ -187,7 +187,53 @@ void* run_command(int argc, char* argv[]) {
     return nullptr;
 };
 
+/// search for a repo on github
+void* search_command(int argc, char* argv[]) {
+    (void)argc; (void)argv;
+    check_arguments(argc, 3, "Usage: cppkg search <query>");
+    GitService git;
+    auto results = git.search(argv[2]);
+    if (results.empty()) {
+        std::cout << Color::red << "No results found for: " << argv[2] << Color::reset << "\n";
+        return nullptr;
+    }
+    for (const auto& r : results) {
+        std::string stars = std::to_string(r.stars);
+        std::cout << "   " << Color::yellow << r.full_name << Color::reset
+                  << " - " << r.description
+                  << Color::cyan << " ⭐" << stars << Color::reset << "\n";
+    }
+    return nullptr;
+}
 
+/// finally a publish command
+void* publish_command(int argc, char* argv[]) {
+    check_arguments(argc, 3, "Usage: cppkg publish <version> --message <msg>");
+
+    std::string version = argv[2];
+    std::string message = "Release v" + version; // default message
+
+    for (int i = 3; i < argc; ++i) {
+        if (std::string(argv[i]) == "--message" && i + 1 < argc) {
+            message = argv[i + 1];
+        }
+    }
+
+    // get token from env
+    const char* token_env = std::getenv("CPPKG_TOKEN");
+    if (!token_env) {
+        std::cout << Color::red
+                  << "No GitHub token found!\n"
+                  << "Set CPPKG_TOKEN environment variable:\n"
+                  << "  export CPPKG_TOKEN=your_token_here\n"
+                  << Color::reset;
+        return nullptr;
+    }
+
+    GitService git;
+    git.publish(version, message, token_env);
+    return nullptr;
+}
 /*
  * just adds base commands to the registry
  * if you didnt already understand it idk whats in your brain
@@ -196,7 +242,9 @@ void INITIALIZE(CommandRegistry& registry) {
     //descending spiral. just how i like it.
     registry.addCommand(Command("crash", "crash the pc (JOKE. just crashes the executable.)", crash_pc_command));
     registry.addCommand(Command("clean", "Clean build artifacts and dependencies", clean_command));
+    registry.addCommand(Command("search", "Search for a dependency on github", search_command));
     registry.addCommand(Command("add", "Add a dependency (author/repo@version)", add_command));
+    registry.addCommand(Command("publish", "Publish the package to github", publish_command));
     registry.addCommand(Command("git", "github integration inside of cppkg!", git_command));
     registry.addCommand(Command("version", "Print the version of cppkg", version_command));
     registry.addCommand(Command("workspace", "Manage workspaces", workspace_command));

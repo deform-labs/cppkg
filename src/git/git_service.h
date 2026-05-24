@@ -1,5 +1,12 @@
 #pragma once
 #include <string>
+#include <vector>
+
+struct SearchResult {
+    std::string full_name;    // "fmtlib/fmt"
+    std::string description;
+    int stars;
+};
 
 class GitService {
     public:
@@ -25,6 +32,15 @@ class GitService {
 
         /// Pushes the changes to the remote repository
         bool push();
+
+        /// Searches for dependencies on GitHub
+        std::vector<SearchResult> search(const std::string& query);
+
+        /// Publishes a release to GitHub
+        bool publish(const std::string& version, const std::string& message, const std::string& token);
+
+        /// Returns the owner of the remote repository
+        std::string get_remote_owner();
     private:
         bool https_mode_;
 };
