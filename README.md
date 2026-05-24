@@ -26,7 +26,7 @@
 ## Features
 - `cppkg init` — scaffold a new C++ project in seconds
 - `cppkg add author/repo@version` — fetch dependencies directly from GitHub
-- `cppkg build` — fetches dependencies, and compiles. 
+- `cppkg build` — fetches dependencies,creates lock file and compiles. 
 - `cppkg clean` — remove build artifacts and cloned dependencies
 - Workspace support — manage multiple packages under one root
 - SSH with HTTPS fallback for dependency cloning
@@ -151,7 +151,6 @@ please look at the source files to understand the layout.
  
 ## Limitations
  
-- No lockfile yet — versions are not pinned to exact commits
 - No conflict resolution for transitive dependencies
 ## License
  
