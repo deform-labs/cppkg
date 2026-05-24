@@ -83,8 +83,10 @@ void CompilerWrapper::add_flag(const std::string& flag) {
 
 std::string CompilerWrapper::get_file_hash(const std::string& filename) {
     std::string command;
-    #ifdef _WIN32
+   #ifdef _WIN32
         command = "certutil -hashfile " + quote(filename) + " MD5 | findstr /v \"MD5\"";
+    #elif __APPLE__
+        command = "md5 -q " + quote(filename);
     #else
         command = "md5sum " + quote(filename) + " | cut -d' ' -f1";
     #endif
