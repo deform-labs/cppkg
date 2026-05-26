@@ -1,5 +1,5 @@
-#ifndef TURTLE_ENGINE_H
-    #define TURTLE_ENGINE_H
+#ifndef ENGINE_H
+    #define ENGINE_H
     #include <string>
 
     #include "command_system/command_system.h"
@@ -8,4 +8,4 @@
     #include "file_system/file_system.h"
     #include "misc/misc.h"
     #include "package_system/package_system.h"
-#endif // TURTLE_ENGINE_H
+#endif

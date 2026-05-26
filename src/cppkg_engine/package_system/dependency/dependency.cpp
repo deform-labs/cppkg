@@ -9,7 +9,7 @@
 
 using namespace cppkg;
 
-toml_parser toml_;
+toml_parser dependency_toml_;
 namespace fs = std::filesystem;
 
 /*
@@ -146,7 +146,7 @@ std::vector<dependency> dependency_impl::load_dependencies(const std::string& pr
     if (!fs::exists(toml_path))
         return deps;
     try {
-        auto toml = toml_.parse_toml(toml_path);
+        auto toml = dependency_toml_.parse_toml(toml_path);
 
         if (!toml.has("dependencies", "")) {
             // does dependencies have children?

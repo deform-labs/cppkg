@@ -7,7 +7,7 @@
 #include <chrono>
 #include <string>
 
-command_system shell_;
+command_system compiler_shell_;
 using namespace cppkg;
 
 static bool is_msvc(const std::string& compiler_path) {
@@ -92,7 +92,7 @@ std::string CompilerWrapper::get_file_hash(const std::string& filename) {
     #else
         command = "md5sum " + quote(filename) + " | cut -d' ' -f1";
     #endif
-    std::string result = shell_.run_with_output(command);
+    std::string result = compiler_shell_.run_with_output(command);
     if (result.empty()) return result;
     result.erase(result.find_last_not_of(" \n\r\t") + 1);
     return result;
@@ -160,7 +160,7 @@ int CompilerWrapper::compile(const std::string& source_file, const std::string& 
     if (config_.verbose)
         std::cout << ux::color::cyan << "COMMAND: " << quote(command_str) << ux::color::reset << std::endl;
 
-    int result = shell_.run_quiet(command_str);
+    int result = compiler_shell_.run_quiet(command_str);
     if (result == 0 && !config_.cache_dir.empty())
         store_cache(source_file, obj_file);
 
@@ -253,9 +253,9 @@ int CompilerWrapper::compile_all(const std::vector<std::string>& source_files) {
     if (config_.verbose)
         std::cout << ux::color::cyan << "LINK COMMAND: " << link_cmd << ux::color::reset << std::endl;
 
-    int link_result = shell_.run_quiet(link_cmd);
+    int link_result = compiler_shell_.run_quiet(link_cmd);
     if (link_result != 0) {
-        std::string err = shell_.run_with_output(link_cmd);
+        std::string err = compiler_shell_.run_with_output(link_cmd);
         std::cerr << ux::color::red << "Linking failed!\n" << err << ux::color::reset << std::endl;
         total_errors++;
     }

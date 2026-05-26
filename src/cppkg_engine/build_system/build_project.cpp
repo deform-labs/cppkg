@@ -1,10 +1,10 @@
-#include "../file_system/toml_implementation/parser/toml_parser.h"
+#include "../file_system/toml/parser/toml_parser.h"
 #include "../package_system/package_system.h"
-#include "../file_system/misc/create_file.h"
+#include "../command_system/command_system.h"
+#include "../misc/file_system/create_file.h"
 #include "../compiler_wrapper/compiler.h"
 #include "../misc/UX/color.h"
 #include "build_project.h"
-#include "../turtle.h"
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -13,10 +13,10 @@
 #include <chrono>
 
 using namespace cppkg;
-using namespace cppkg::UX;
+using namespace cppkg::ux;
 
-turtle shell_;
-toml_parser toml_;
+command_system build_shell_;
+toml_parser build_toml_;
 namespace fs = std::filesystem;
 
 /// Spinner animation lmao W UX
@@ -24,10 +24,10 @@ void spinner(const std::string& label, std::atomic<bool>& done) {
     const char frames[] = { '|', '/', '-', '\\' };
     int i = 0;
     while (!done) {
-        std::cout << "\r" << Color::cyan << frames[i++ % 4] << " " << label << Color::reset << std::flush;
+        std::cout << "\r" << color::cyan << frames[i++ % 4] << " " << label << color::reset << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    std::cout << "\r" << Color::green << "[OK] " << label << Color::reset << "    \n";
+    std::cout << "\r" << color::green << "[OK] " << label << color::reset << "    \n";
 };
 
 /// building by brick or by plaster?
@@ -71,9 +71,9 @@ void create_lists(fs::path project_dir, std::string name, std::string cpp_std, d
 
 void get_deps() {
     dependency_impl deps;
-    std::cout << Color::cyan << "Fetching dependencies..." << Color::reset << "\n";
+    std::cout << color::cyan << "Fetching dependencies..." << color::reset << "\n";
     if (!deps.fetch_all(".")) {
-        std::cout << Color::red << "Some dependencies failed to fetch" << Color::reset << "\n";
+        std::cout << color::red << "Some dependencies failed to fetch" << color::reset << "\n";
     }
 }
 
@@ -93,7 +93,7 @@ std::vector<std::string> get_source_files() {
 }
 
 CompilerWrapper::CompilerConfig get_compiler_config(const std::string& path) {
-    auto toml = toml_.parse_toml(path + "/cppkg.toml");
+    auto toml = build_toml_.parse_toml(path + "/cppkg.toml");
     std::string name = toml.get("package", "name");
     std::string cpp_std = toml.get("package", "cpp_std");
 
@@ -157,25 +157,25 @@ void Build::build_project(const std::string& path) {
         throw std::runtime_error("Build failed!");
     }
 
-    std::cout << Color::green << "Build successful: " << config.output_name << Color::reset << "\n";
+    std::cout << color::green << "Build successful: " << config.output_name << color::reset << "\n";
 }
 
 
 /// well well well. What do we have here, an user in a hurry i see.
 void Build::run_project(const std::string& path) {
-    auto toml = toml_.parse_toml(path + "/cppkg.toml");
+    auto toml = build_toml_.parse_toml(path + "/cppkg.toml");
     std::string name = toml.get("package", "name");
 
     std::atomic<bool> done(false);
 
     std::thread t(spinner, "Running: ", std::ref(done));
-    int r = shell_.run("target/build/" + name);
+    int r = build_shell_.run("target/build/" + name);
     done = true;
     t.join();
 
     if (r != 0) {
-        std::cout << Color::red << "Run failed!" << Color::reset << "\n";
+        std::cout << color::red << "Run failed!" << color::reset << "\n";
     } else {
-        std::cout << Color::green << "Run successful: " << name << Color::reset << "\n";
+        std::cout << color::green << "Run successful: " << name << color::reset << "\n";
     }
 }

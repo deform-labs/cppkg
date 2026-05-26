@@ -1,11 +1,11 @@
 #pragma once
-#include "../../turtle_engine/turtle_engine.h"
+#include "../../cppkg_engine/cppkg_engine.h"
 #include <string>
 
 
 /// get the day the guy committed war crimes.
 inline std::string get_git_commit() {
-    command_system shell_;
+    cppkg::command_system shell_;
     // `git rev-parse --short HEAD` gives a short 7‑character hash.
     std::string out = shell_.run_with_output("git rev-parse --short HEAD");
     if (out.empty()) return "unknown";

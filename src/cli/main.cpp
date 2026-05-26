@@ -1,4 +1,4 @@
-#include "../turtle_engine/turtle_engine.h"
+#include "../cppkg_engine/cppkg_engine.h"
 #include "../api/version/version.h"
 #include <algorithm>
 #include <iostream>
@@ -6,23 +6,24 @@
 #include <vector>
 #include <string>
 
-using namespace cppkg;
 
-HandlePackage handlePackage;
+cppkg::HandlePackage handlePackage;
+cppkg::command_system cmd_;
+cppkg::GithubClient git;
+cppkg::Build build;
+
 CommandRegistry registry;
-Build build;
-command_system cmd_;
 
 /// dumbfuck if you cant understand ts
 void handle_error(const std::runtime_error& e) {
-    std::cout << ux::color::red << e.what() << ux::color::reset << std::endl;
+    std::cout << cppkg::ux::color::red << e.what() << cppkg::ux::color::reset << std::endl;
 }
 
 /// ok so this one might need an explanation but it's pretty self-explanatory for amateurs B)
 /// for dumbasses: it checks the amount of arguments against the minimum required
 void check_arguments(int argc, int min_args, const std::string& usage) {
     if (argc < min_args) {
-        std::cout << ux::color::green << usage << ux::color::reset << "\n";
+        std::cout << cppkg::ux::color::green << usage << cppkg::ux::color::reset << "\n";
         exit(1);
     }
 }
@@ -60,7 +61,7 @@ void* crash_pc_command(int argc, char* argv[]) {
 /// commit number WHAT?
 void* version_command(int argc, char* argv[]) {
     (void)argc; (void)argv;
-    std::cout << ux::color::cyan << "cppkg version " << get_git_commit() << ux::color::reset << std::endl;
+    std::cout << cppkg::ux::color::cyan << "cppkg version " << get_git_commit() << cppkg::ux::color::reset << std::endl;
     return nullptr;
 };
 
@@ -68,7 +69,7 @@ void* version_command(int argc, char* argv[]) {
 void* remove_command(int argc, char* argv[]) {
     (void)argc;
     std::string name = argv[2];
-    dependency_impl deps;
+    cppkg::dependency_impl deps;
     deps.remove(name);
     return nullptr;
 };
@@ -78,9 +79,9 @@ void* clean_command(int argc, char* argv[]) {
     std::string path = ".";
     if (argc >= 3) path = argv[2];
     else (void)argv;
-    dependency_impl deps;
+    cppkg::dependency_impl deps;
     deps.clean(path);
-    std::cout << ux::color::green << "Cleaned build/target" << ux::color::reset << "\n";
+    std::cout << cppkg::ux::color::green << "Cleaned build/target" << cppkg::ux::color::reset << "\n";
     return nullptr;
 };
 
@@ -96,11 +97,11 @@ void* Build_command(int argc, char* argv[]) {
 /// helpp please!!!
 void* help_command(int argc, char* argv[]) {
     (void)argc; (void)argv;
-    std::cout << ux::color::green << "Usage: cppkg <command> <args>\n\n" << ux::color::reset;
-    std::cout << ux::color::cyan << "Available commands:\n" << ux::color::reset;
+    std::cout << cppkg::ux::color::green << "Usage: cppkg <command> <args>\n\n" << cppkg::ux::color::reset;
+    std::cout << cppkg::ux::color::cyan << "Available commands:\n" << cppkg::ux::color::reset;
 
     if (registry.commands.empty()) {
-        std::cout << "   " << ux::color::red << "(no commands registered)" << ux::color::reset << "\n";
+        std::cout << "   " << cppkg::ux::color::red << "(no commands registered)" << cppkg::ux::color::reset << "\n";
         return nullptr;
     }
 
@@ -112,7 +113,7 @@ void* help_command(int argc, char* argv[]) {
     /// I CHOOSE DEATH!
     for (const Command& cmd : registry.commands) {
         std::string padding(max_len - cmd.name.size() + 2, ' ');
-        std::cout << "   " << ux::color::yellow << cmd.name << ux::color::reset
+        std::cout << "   " << cppkg::ux::color::yellow << cmd.name << cppkg::ux::color::reset
                   << padding << "- " << cmd.description << "\n";
     }
 
@@ -150,8 +151,8 @@ void* git_command(int argc, char* argv[]) {
         "   rm - remove files from the staging area. for flags use git --help. \n" +
         "\n";
     if (argument == "help") {
-        std::cout << ux::color::cyan << git_command_help;
-        std::cout << ux::color::reset << "\n";
+        std::cout << cppkg::ux::color::cyan << git_command_help;
+        std::cout << cppkg::ux::color::reset << "\n";
         return nullptr;
     }
     cmd_.run("git " + argument);
@@ -165,12 +166,12 @@ void* add_command(int argc, char* argv[]) {
     for (int i = 3; i < argc; ++i) {
         if (std::string(argv[i]) == "--https") https = true;
         if (std::string(argv[i]) == "--help")
-            std::cout << ux::color::cyan
+            std::cout << cppkg::ux::color::cyan
                       << "Add a dependency to the workspace or to the package.\n"
                       << " Usage: cppkg add <author/repo>@<version>"
-                      << ux::color::reset << "\n";
+                      << cppkg::ux::color::reset << "\n";
     }
-    dependency_impl deps(https);
+    cppkg::dependency_impl deps(https);
     deps.add(spec);
     return nullptr;
 };
@@ -187,16 +188,16 @@ void* run_command(int argc, char* argv[]) {
 /// search for a repo on github
 void* search_command(int argc, char* argv[]) {
     check_arguments(argc, 3, "Usage: cppkg search <query>");
-    GithubClient git;
+    cppkg::GithubClient git;
     auto results = git.search(argv[2]);
     if (results.empty()) {
-        std::cout << ux::color::red << "No results found for: " << argv[2] << ux::color::reset << "\n";
+        std::cout << cppkg::ux::color::red << "No results found for: " << argv[2] << cppkg::ux::color::reset << "\n";
         return nullptr;
     }
     for (const auto& r : results) {
-        std::cout << "   " << ux::color::yellow << r.full_name << ux::color::reset
+        std::cout << "   " << cppkg::ux::color::yellow << r.full_name << cppkg::ux::color::reset
                   << " - " << r.description
-                  << ux::color::cyan << " ⭐" << r.stars << ux::color::reset << "\n";
+                  << cppkg::ux::color::cyan << " Stars: " << r.stars << cppkg::ux::color::reset << "\n";
     }
     return nullptr;
 };
@@ -221,15 +222,14 @@ void* publish_command(int argc, char* argv[]) {
 
     const char* token_env = std::getenv("CPPKG_TOKEN");
     if (!token_env) {
-        std::cout << ux::color::red
+        std::cout << cppkg::ux::color::red
                   << "No GitHub token found!\n"
                   << "Set CPPKG_TOKEN environment variable:\n"
                   << "  export CPPKG_TOKEN=your_token_here\n"
-                  << ux::color::reset;
+                  << cppkg::ux::color::reset;
         return nullptr;
     }
 
-    GithubClient git;
     git.publish(version, message, token_env);
     return nullptr;
 };
