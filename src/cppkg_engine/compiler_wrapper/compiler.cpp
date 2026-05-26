@@ -1,5 +1,5 @@
 #include "../command_system/command_system.h"
-#include "../misc/UX/color.h"
+#include "../misc/ux/color.h"
 #include <filesystem>
 #include "compiler.h"
 #include <algorithm>
@@ -7,8 +7,8 @@
 #include <chrono>
 #include <string>
 
-command_system compiler_shell_;
 using namespace cppkg;
+command_system compiler_shell_;
 
 static bool is_msvc(const std::string& compiler_path) {
     std::string p = compiler_path;
