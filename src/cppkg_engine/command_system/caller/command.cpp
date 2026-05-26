@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <array>
 
+using namespace cppkg;
+
 /// JUST DO IT
 int command_system::run(const std::string& command) {
     return std::system(command.c_str());
