@@ -3,7 +3,7 @@
 #include "../command_system/command_system.h"
 #include "../misc/file_system/create_file.h"
 #include "../compiler_wrapper/compiler.h"
-#include "../misc/UX/color.h"
+#include "../misc/ux/color.h"
 #include "build_project.h"
 #include <filesystem>
 #include <iostream>
