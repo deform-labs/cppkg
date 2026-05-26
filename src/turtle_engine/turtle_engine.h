@@ -7,4 +7,5 @@
     #include "compiler_wrapper/compiler.h"
     #include "file_system/file_system.h"
     #include "misc/misc.h"
+    #include "package_system/package_system.h"
 #endif // TURTLE_ENGINE_H
