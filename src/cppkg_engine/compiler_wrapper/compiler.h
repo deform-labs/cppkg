@@ -6,9 +6,9 @@
     #include <filesystem>
 
     namespace cppkg {
-        class CompilerWrapper {
+        class compiler {
             public:
-                struct CompilerConfig {
+                struct config {
                     std::string compiler_path = "g++";
                     std::string cpp_std = "c++20";
                     std::vector<std::string> default_flags = {"-Wall", "-Wextra", "-O2"};
@@ -18,20 +18,20 @@
                     bool verbose = false;
                     bool color_output = true;
                     std::string cache_dir = ".cppkg/cache";  // This is fine here
-                    std::string build_dir = "build";
+                    std::string build_dir = "target";
                     std::string output_name = "cppkg_app";
-                    CompilerConfig() = default;
+                    config() = default;
                 };
 
-                explicit CompilerWrapper(const CompilerConfig& config);
+                explicit compiler(const config& config);
                 // Constructors
-                CompilerWrapper();  // default constructor
+                compiler();  // default constructor
 
                 int compile(const std::string& source_file, const std::string& output_file = "");
                 int compile_all(const std::vector<std::string>& source_files);
 
             private:
-                CompilerConfig config_;
+                config config_;
                 std::vector<std::string> build_command_;
 
                 void build_base_command();
@@ -39,6 +39,16 @@
                 bool check_cache(const std::string& source, const std::string& output);
                 void store_cache(const std::string& source, const std::string& output);
                 std::string get_file_hash(const std::string& filename);
+
+
+                /// misc
+
+                bool is_msvc(const std::string& compiler_path);
+                std::string translate_flag(const std::string& flag, bool msvc);
+                std::string quote(const std::string& s);
+                std::string handle_msvc_linker(const compiler::config& config, const std::vector<std::string>& obj_files);
+                std::string handle_linux_macos_linker(const compiler::config& config, const std::vector<std::string>& obj_files);
+                int compile_sourcedir(compiler& wrapper, const compiler::config& config, const std::vector<std::string>& source_files, bool msvc, std::vector<std::string>& obj_files);
         };
     }
 #endif // COMPILER_WRAPPER_H

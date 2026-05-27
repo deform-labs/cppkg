@@ -10,44 +10,19 @@
 using namespace cppkg;
 command_system compiler_shell_;
 
-static bool is_msvc(const std::string& compiler_path) {
-    std::string p = compiler_path;
-    for (auto& c : p) c = (char)tolower(c);
-    return (
-        p == "cl" ||
-        p == "cl.exe" ||
-        (
-            p.find("cl") != std::string::npos &&
-            p.find("g++") == std::string::npos &&
-            p.find("clang") == std::string::npos
-        )
-    );
-}
-
-static std::string quote(const std::string& s) {
-    return "\"" + s + "\"";
-}
-
-static std::string translate_flag(const std::string& flag, bool msvc) {
-    if (!msvc) return flag;
-    if (flag == "-Wall" || flag == "-Wextra") return "/W4";
-    if (flag == "-O2")  return "/O2";
-    if (flag == "-O0")  return "/Od";
-    if (flag == "-g")   return "/Zi";
-    if (flag == "-c")   return "/c";
-    if (flag.substr(0, 5) == "-std=") return "/std:" + flag.substr(5);
-    return flag;
-}
-
-CompilerWrapper::CompilerWrapper(const CompilerConfig& config)
-    : config_(config) {
+/// W deepseek!
+compiler::compiler() : config_() {
     build_base_command();
 }
 
-void CompilerWrapper::build_base_command() {
+compiler::compiler(const config& cfg) : config_(cfg) {
+    build_base_command();
+}
+
+void compiler::build_base_command() {
     bool msvc = is_msvc(config_.compiler_path);
     build_command_.clear();
-    build_command_.push_back(quote(config_.compiler_path));
+    build_command_.push_back(config_.compiler_path);
 
     if (msvc) {
         build_command_.push_back("/std:c++17");
@@ -79,11 +54,11 @@ void CompilerWrapper::build_base_command() {
     }
 }
 
-void CompilerWrapper::add_flag(const std::string& flag) {
+void compiler::add_flag(const std::string& flag) {
     build_command_.push_back(flag);
 }
 
-std::string CompilerWrapper::get_file_hash(const std::string& filename) {
+std::string compiler::get_file_hash(const std::string& filename) {
     std::string command;
    #ifdef _WIN32
         command = "certutil -hashfile " + quote(filename) + " MD5 | findstr /v \"MD5\"";
@@ -98,7 +73,7 @@ std::string CompilerWrapper::get_file_hash(const std::string& filename) {
     return result;
 }
 
-bool CompilerWrapper::check_cache(const std::string& source, const std::string& output) {
+bool compiler::check_cache(const std::string& source, const std::string& output) {
     if (config_.cache_dir.empty()) return false;
     std::filesystem::create_directories(config_.cache_dir);
     std::string source_hash = get_file_hash(source);
@@ -115,7 +90,7 @@ bool CompilerWrapper::check_cache(const std::string& source, const std::string& 
     return false;
 }
 
-void CompilerWrapper::store_cache(const std::string& source, const std::string& output) {
+void compiler::store_cache(const std::string& source, const std::string& output) {
     if (config_.cache_dir.empty()) return;
     std::string source_hash = get_file_hash(source);
     std::string cache_file = config_.cache_dir + "/" + source_hash;
@@ -124,7 +99,7 @@ void CompilerWrapper::store_cache(const std::string& source, const std::string& 
         std::filesystem::copy_options::overwrite_existing, ec);
 }
 
-int CompilerWrapper::compile(const std::string& source_file, const std::string& output_file) {
+int compiler::compile(const std::string& source_file, const std::string& output_file) {
     if (!std::filesystem::exists(source_file)) {
         std::cerr << ux::color::red << "Error: Source file " << source_file
                   << " does not exist!" << ux::color::reset << std::endl;
@@ -140,7 +115,7 @@ int CompilerWrapper::compile(const std::string& source_file, const std::string& 
         if (slash != std::string::npos) filename = filename.substr(slash + 1);
         auto dot = filename.find_last_of('.');
         if (dot != std::string::npos) filename = filename.substr(0, dot);
-        obj_file = config_.build_dir + "/" + filename + (msvc ? ".obj" : ".o");
+        obj_file = config_.build_dir + "/objs/" + filename + (msvc ? ".obj" : ".o");
     }
 
     if (check_cache(source_file, obj_file)) return 0;
@@ -148,86 +123,31 @@ int CompilerWrapper::compile(const std::string& source_file, const std::string& 
     std::cout << ux::color::yellow << "[Compiling] -> " << source_file << "..." << ux::color::reset << std::endl;
 
     std::string command_str;
-    for (const auto& part : build_command_)
-        command_str += " " + part;
+    for (size_t i = 0; i < build_command_.size(); ++i) {
+        if (i > 0) command_str += " ";
+        command_str += build_command_[i];
+    }
 
     if (msvc) {
         command_str += " /c " + source_file + " /Fo" + obj_file;
     } else {
-        command_str += " -c " + source_file + " -o " + obj_file;
+        command_str += " -c " + source_file + " -o" + obj_file;
     }
 
     if (config_.verbose)
         std::cout << ux::color::cyan << "COMMAND: " << quote(command_str) << ux::color::reset << std::endl;
 
     int result = compiler_shell_.run_quiet(command_str);
-    if (result == 0 && !config_.cache_dir.empty())
-        store_cache(source_file, obj_file);
+    if (result == 1)
+        compiler_shell_.run(command_str);
+
+    store_cache(source_file, obj_file);
 
     return result;
 }
 
-/// windows linker
-static std::string handle_msvc_linker(const CompilerWrapper::CompilerConfig& config, const std::vector<std::string>& obj_files) {
-    std::string out = config.build_dir + "/" + (config.output_name.empty() ? "program" : config.output_name) + ".exe";
-    std::string link_cmd = "link /nologo /OUT:" + quote(out);
-    for (const auto& lib : config.libraries)
-        link_cmd += " " + lib + ".lib";
-    for (const auto& obj : obj_files)
-        link_cmd += " " + quote(obj);
-    return link_cmd;
-}
-
-/// linux/macos linker
-static std::string handle_linux_macos_linker(const CompilerWrapper::CompilerConfig& config, const std::vector<std::string>& obj_files) {
-    std::string out = config.build_dir + "/" + (config.output_name.empty() ? "program" : config.output_name);
-    std::string link_cmd = quote(config.compiler_path);
-    for (const auto& obj : obj_files)
-        link_cmd += " " + quote(obj);
-    for (const auto& path : config.library_paths)
-        link_cmd += " -L" + quote(path);
-    for (const auto& lib : config.libraries)
-        link_cmd += " -l" + lib;
-    link_cmd += " -o " + quote(out);
-    return link_cmd;
-}
-
-/// compile all source files and return obj list + error count
-static int compile_sourcedir(CompilerWrapper& wrapper, const CompilerWrapper::CompilerConfig& config,
-                              const std::vector<std::string>& source_files, bool msvc,
-                              std::vector<std::string>& obj_files) {
-    int total_errors = 0;
-    int compiled = 0;
-
-    for (const auto& source : source_files) {
-        if (config.verbose) {
-            std::cout << ux::color::cyan << "[" << (compiled + 1) << "/" << source_files.size() << "]"
-                      << " Processing " << source << "..." << ux::color::reset << std::endl;
-        }
-
-        std::string filename = source;
-        auto slash = filename.find_last_of("/\\");
-        if (slash != std::string::npos) filename = filename.substr(slash + 1);
-        auto dot = filename.find_last_of('.');
-        if (dot != std::string::npos) filename = filename.substr(0, dot);
-
-        std::string obj = config.build_dir + "/" + filename + (msvc ? ".obj" : ".o");
-        int result = wrapper.compile(source, obj);
-
-        if (result != 0) {
-            total_errors++;
-            if (config.verbose)
-                std::cerr << ux::color::red << "Failed to compile -> " << source << ux::color::reset << std::endl;
-        } else {
-            obj_files.push_back(obj);
-        }
-        compiled++;
-    }
-    return total_errors;
-}
-
 /// gotta compile em all (⌐■_■)
-int CompilerWrapper::compile_all(const std::vector<std::string>& source_files) {
+int compiler::compile_all(const std::vector<std::string>& source_files) {
     bool msvc = is_msvc(config_.compiler_path);
     int total_errors = 0;
     std::vector<std::string> obj_files;
@@ -236,7 +156,7 @@ int CompilerWrapper::compile_all(const std::vector<std::string>& source_files) {
     auto start_time = std::chrono::steady_clock::now();
 
     // compile phase undertale ahh
-    total_errors = compile_sourcedir(*this, config_, source_files, msvc, obj_files);
+    total_errors = cppkg::compiler::compile_sourcedir(*this, config_, source_files, msvc, obj_files);
 
     if (obj_files.empty()) {
         std::cerr << ux::color::red << "No object files to link" << ux::color::reset << std::endl;

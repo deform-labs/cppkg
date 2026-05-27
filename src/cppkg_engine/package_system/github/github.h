@@ -4,15 +4,15 @@
     #include <vector>
 
     namespace cppkg {
-        struct SearchResult {
+        struct search_result {
             std::string full_name;    // "fmtlib/fmt"
             std::string description;
             int stars;
         };
 
-        class GithubClient {
+        class github {
             public:
-                explicit GithubClient(bool use_https = false);
+                explicit github(bool use_https = false);
 
                 /// Clones the repository for the given author and repo, using the specified tag if provided
                 bool clone(const std::string& author, const std::string& repo, const std::string& tag = "");
@@ -36,7 +36,7 @@
                 bool push();
 
                 /// Searches for dependencies on GitHub
-                std::vector<SearchResult> search(const std::string& query);
+                std::vector<search_result> search(const std::string& query);
 
                 /// Publishes a release to GitHub
                 bool publish(const std::string& version, const std::string& message, const std::string& token);

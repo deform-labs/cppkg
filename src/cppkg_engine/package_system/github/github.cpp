@@ -6,16 +6,16 @@
 #include <vector>
 
 /// aliases here aliases there, are we ever going to stop using aliases?
-command_system shell_;
+cppkg::command_system shell_;
 namespace fs = std::filesystem;
 using namespace cppkg;
 
 /// wooah https?
-GithubClient::GithubClient(bool use_https)
+github::github(bool use_https)
     : https_mode_(use_https) {}
 
 /// i high-key dunno what most of this codr does i just trust it
-std::string GithubClient::build_url(const std::string& author, const std::string& repo, bool https) const {
+std::string github::build_url(const std::string& author, const std::string& repo, bool https) const {
     if (https || https_mode_) {
         return "https://github.com/" + author + "/" + repo + ".git";
     }
@@ -23,12 +23,12 @@ std::string GithubClient::build_url(const std::string& author, const std::string
 }
 
 /// get dat path
-std::string GithubClient::dep_path(const std::string& repo, const std::string& base) {
+std::string github::dep_path(const std::string& repo, const std::string& base) {
     return base + "/" + repo;
 }
 
 // get that assh
-std::string GithubClient::get_commit_hash(const std::string& repo_path) {
+std::string github::get_commit_hash(const std::string& repo_path) {
     std::string cmd = "git -C \"" + repo_path + "\" rev-parse --short HEAD";
     std::string out = shell_.run_with_output(cmd);
     // trim that assh
@@ -38,7 +38,7 @@ std::string GithubClient::get_commit_hash(const std::string& repo_path) {
 }
 
 /// clone that ass
-bool GithubClient::clone(const std::string& author, const std::string& repo, const std::string& tag) {
+bool github::clone(const std::string& author, const std::string& repo, const std::string& tag) {
     std::string dest = dep_path(repo, "target/deps");
 
     if (fs::exists(dest)) {
@@ -86,7 +86,7 @@ bool GithubClient::clone(const std::string& author, const std::string& repo, con
 }
 
 /// Validates the repository for the given author and repo, using HTTPS if enabled
-bool GithubClient::validate_repo(const std::string& author, const std::string& repo) {
+bool github::validate_repo(const std::string& author, const std::string& repo) {
     // if user prefereth ith cppkgth shall useth ith
     std::string url = build_url(author, repo, false);
     std::string cmd = "git ls-remote " + url + " HEAD";
@@ -104,7 +104,7 @@ bool GithubClient::validate_repo(const std::string& author, const std::string& r
 
 /// for beginners this saves the changes to github
 /// genuinely tho if you used git before you should know this
-bool GithubClient::commit(const std::string& message) {
+bool github::commit(const std::string& message) {
     if (!shell_.command_exists("git")) {
         std::cout << ux::color::green << "Git not found. Please install Git: https://git-scm.com/" << ux::color::reset << std::endl;
         return false;
@@ -115,7 +115,7 @@ bool GithubClient::commit(const std::string& message) {
 }
 
 /// cmon girl! Push!
-bool GithubClient::push() {
+bool github::push() {
     if (!shell_.command_exists("git")) {
         return false;
     }
@@ -126,7 +126,7 @@ bool GithubClient::push() {
 
 
 /// forked ts because i didnt know how the github api worked
-std::vector<SearchResult> GithubClient::search(const std::string& query) {
+std::vector<search_result> github::search(const std::string& query) {
     std::string cmd = "curl -s \"https://api.github.com/search/repositories"
                   "?q=" + query + "+language:cpp&sort=stars&per_page=5\"";
 
@@ -134,7 +134,7 @@ std::vector<SearchResult> GithubClient::search(const std::string& query) {
     if (output.empty()) return {};
 
     // parse json manually - no deps
-    std::vector<SearchResult> results;
+    std::vector<search_result> results;
     size_t pos = 0;
 
     while ((pos = output.find("\"full_name\"", pos)) != std::string::npos) {
@@ -169,7 +169,7 @@ std::vector<SearchResult> GithubClient::search(const std::string& query) {
 
 /// forked this too lol
 /// gets the owner from git remote
-std::string GithubClient::get_remote_owner() {
+std::string github::get_remote_owner() {
     std::string output = shell_.run_with_output("git remote get-url origin");
     // parses both https://github.com/owner/repo and git@github.com:owner/repo
     size_t pos = output.find("github.com");
@@ -182,7 +182,7 @@ std::string GithubClient::get_remote_owner() {
 
 /// forked this too lmao
 /// publish a release to github
-bool GithubClient::publish(const std::string& version, const std::string& message, const std::string& token) {
+bool github::publish(const std::string& version, const std::string& message, const std::string& token) {
     // step 1: git add and commit
     std::cout << ux::color::cyan << "Committing changes..." << ux::color::reset << "\n";
     shell_.run("git add .");

@@ -2,7 +2,6 @@
 name = "cppkg"
 version = "1.4.0"
 cpp_std = "c++c23"
-compiler = "cl"
 
 [compiler]
 IncludePaths = ["src"]

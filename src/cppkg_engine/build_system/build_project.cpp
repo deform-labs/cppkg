@@ -17,6 +17,7 @@ using namespace cppkg::ux;
 
 command_system build_shell_;
 toml_parser build_toml_;
+dependency_impl deps;
 namespace fs = std::filesystem;
 
 /// Spinner animation lmao W UX
@@ -41,15 +42,19 @@ static std::string detect_build_type(int argc, char* argv[]) {
 }
 
 /// i have to for compatibility and for users whole just prefer cmake :|
-void create_lists(fs::path project_dir, std::string name, std::string cpp_std, dependency_impl deps) {
+void build::create_lists(fs::path project_dir) {
+
+    Toml toml = build_toml_.parse_toml(project_dir.string() + "/cppkg.toml");
     std::string cmake;
+    std::string name = toml.get("package", "name");
+    std::string cpp_std = toml.get("package", "cpp_std");
     cmake += "cmake_minimum_required(VERSION 3.10)\n";
     cmake += "project(" + name + ")\n\n";
     cmake += "set(CMAKE_CXX_STANDARD " + cpp_std + ")\n";
     cmake += "set(CMAKE_CXX_STANDARD_REQUIRED True)\n\n";
     cmake += "file(GLOB_RECURSE SOURCES \"src/*.cpp\")\n\n";
 
-    auto dependencies = deps.load_dependencies(".");
+    auto dependencies = deps.load_dependencies(project_dir.string());
     bool has_add_subdirectory = false;
     for (const auto& dep : dependencies) {
         cmake += "add_subdirectory(target/deps/" + dep.repo + ")\n";
@@ -65,9 +70,8 @@ void create_lists(fs::path project_dir, std::string name, std::string cpp_std, d
     cmake += ")\n";
 
     create_file("CMakeLists.txt", project_dir.string(), cmake);
+    std::cout << color::cyan << "CMakeLists.txt created successfully in " << project_dir.string() << color::reset << "\n";
 }
-
-
 
 void get_deps() {
     dependency_impl deps;
@@ -92,7 +96,7 @@ std::vector<std::string> get_source_files() {
     return source_files;
 }
 
-CompilerWrapper::CompilerConfig get_compiler_config(const std::string& path) {
+compiler::config get_compiler_config(const std::string& path) {
     auto toml = build_toml_.parse_toml(path + "/cppkg.toml");
     std::string name = toml.get("package", "name");
     std::string cpp_std = toml.get("package", "cpp_std");
@@ -101,7 +105,7 @@ CompilerWrapper::CompilerConfig get_compiler_config(const std::string& path) {
         cpp_std = cpp_std.substr(3);
 
     // finally it can NOT use cmake
-    CompilerWrapper::CompilerConfig config;
+    compiler::config config;
 
     // compiler avenue 69
     if (toml.has("package", "compiler")) {
@@ -136,7 +140,7 @@ CompilerWrapper::CompilerConfig get_compiler_config(const std::string& path) {
 }
 
 /// building it brick by brick
-void Build::build_project(const std::string& path) {
+void build::build_project(const std::string& path) {
     fs::path project_dir = fs::current_path() / path;
     fs::current_path(project_dir);
 
@@ -147,9 +151,8 @@ void Build::build_project(const std::string& path) {
     std::vector<std::string> source_files = get_source_files();
 
     // finally it can NOT use cmake
-    CompilerWrapper::CompilerConfig config = get_compiler_config(path);
-
-    CompilerWrapper compiler(config);
+    compiler::config config = get_compiler_config(path);
+    compiler compiler(config);
 
     // compile that ass
     int result = compiler.compile_all(source_files);
@@ -162,14 +165,24 @@ void Build::build_project(const std::string& path) {
 
 
 /// well well well. What do we have here, an user in a hurry i see.
-void Build::run_project(const std::string& path) {
+void build::run_project(const std::string& path) {
     auto toml = build_toml_.parse_toml(path + "/cppkg.toml");
     std::string name = toml.get("package", "name");
+
+    compiler::config config = get_compiler_config(path);
 
     std::atomic<bool> done(false);
 
     std::thread t(spinner, "Running: ", std::ref(done));
-    int r = build_shell_.run("target/build/" + name);
+    // Add platform-appropriate extension
+    #ifdef _WIN32
+        std::string run_path = "./" + config.build_dir + "/" + name + ".exe";
+    #else
+        std::string run_path = "./" + config.build_dir + "/" + name;
+    #endif
+
+    std::cout << cppkg::ux::color::yellow << "DEBUG: Running: " << run_path << cppkg::ux::color::reset << std::endl;
+    int r = build_shell_.run(run_path);  // Quote paths with spaces
     done = true;
     t.join();
 

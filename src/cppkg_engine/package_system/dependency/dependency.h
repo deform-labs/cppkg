@@ -29,6 +29,6 @@ namespace cppkg {
             void clean(const std::string& project_root = ".");
 
         private:
-            GithubClient git_;
+            github git_;
     };
 };

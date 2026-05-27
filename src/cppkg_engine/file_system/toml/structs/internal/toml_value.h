@@ -3,7 +3,9 @@
 
     #include <string>
 
-    struct TomlValue {
-        std::string value;
-    };
+    namespace cppkg {
+        struct TomlValue {
+            std::string value;
+        };
+    }
 #endif

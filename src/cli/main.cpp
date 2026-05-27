@@ -8,9 +8,9 @@
 
 
 cppkg::HandlePackage handlePackage;
-cppkg::command_system cmd_;
-cppkg::GithubClient git;
-cppkg::Build build;
+cppkg::command_system cli_cmd;
+cppkg::github cli_git;
+cppkg::build cli_build;
 
 CommandRegistry registry;
 
@@ -41,9 +41,9 @@ void* workspace_command(int argc, char* argv[]) {
         handlePackage.create_workspace(argv[3]);
     } else if (sub == "build") {
         if (argc >= 4) {
-            build.build_project(argv[3]);
+            cli_build.build_project(argv[3]);
         } else {
-            build.build_project(".");
+            cli_build.build_project(".");
         }
     }
 
@@ -80,6 +80,7 @@ void* clean_command(int argc, char* argv[]) {
     if (argc >= 3) path = argv[2];
     else (void)argv;
     cppkg::dependency_impl deps;
+    std::filesystem::remove_all(path + "/target");
     deps.clean(path);
     std::cout << cppkg::ux::color::green << "Cleaned build/target" << cppkg::ux::color::reset << "\n";
     return nullptr;
@@ -90,7 +91,7 @@ void* Build_command(int argc, char* argv[]) {
     std::string path = ".";
     if (argc >= 3) path = argv[2];
     else (void)argv;
-    build.build_project(path);
+    cli_build.build_project(path);
     return nullptr;
 };
 
@@ -155,7 +156,7 @@ void* git_command(int argc, char* argv[]) {
         std::cout << cppkg::ux::color::reset << "\n";
         return nullptr;
     }
-    cmd_.run("git " + argument);
+    cli_cmd.run("git " + argument);
     return nullptr;
 };
 
@@ -181,15 +182,14 @@ void* run_command(int argc, char* argv[]) {
     std::string path = ".";
     if (argc >= 3) path = argv[2];
     else (void)argv;
-    build.run_project(path);
+    cli_build.run_project(path);
     return nullptr;
 };
 
 /// search for a repo on github
 void* search_command(int argc, char* argv[]) {
     check_arguments(argc, 3, "Usage: cppkg search <query>");
-    cppkg::GithubClient git;
-    auto results = git.search(argv[2]);
+    auto results = cli_git.search(argv[2]);
     if (results.empty()) {
         std::cout << cppkg::ux::color::red << "No results found for: " << argv[2] << cppkg::ux::color::reset << "\n";
         return nullptr;
@@ -230,9 +230,17 @@ void* publish_command(int argc, char* argv[]) {
         return nullptr;
     }
 
-    git.publish(version, message, token_env);
+    cli_git.publish(version, message, token_env);
     return nullptr;
 };
+
+void* create_cmakelists(int argc, char* argv[]) {
+    check_arguments(argc, 2, "Not enough arguments passed! \n   Example: cppkg cmake <project_dir>");
+
+    fs::path project_dir = argv[2];
+    cli_build.create_lists(project_dir);
+    return nullptr;
+}
 
 /*
  * just adds base commands to the registry
@@ -240,19 +248,21 @@ void* publish_command(int argc, char* argv[]) {
  */
 void INITIALIZE(CommandRegistry& registry) {
     //descending spiral. just how i like it.
-    registry.addCommand(Command("crash",     "crash the pc (JOKE. just crashes the executable.)", crash_pc_command));
-    registry.addCommand(Command("clean",     "Clean build artifacts and dependencies",            clean_command));
-    registry.addCommand(Command("search",    "Search for a dependency on github",                 search_command));
-    registry.addCommand(Command("add",       "Add a dependency (author/repo@version)",            add_command));
-    registry.addCommand(Command("publish",   "Publish the package to github",                     publish_command));
-    registry.addCommand(Command("git",       "github integration inside of cppkg!",               git_command));
-    registry.addCommand(Command("version",   "Print the version of cppkg",                        version_command));
-    registry.addCommand(Command("workspace", "Manage workspaces",                                  workspace_command));
-    registry.addCommand(Command("init",      "Initialize a new package",                           init_command));
-    registry.addCommand(Command("remove",    "Remove a dependency",                                remove_command));
-    registry.addCommand(Command("build",     "Build the package",                                  Build_command));
-    registry.addCommand(Command("run",       "Run the package",                                    run_command));
-    registry.addCommand(Command("help",      "Show help",                                          help_command));
+    registry.addCommand(Command("crash", "crash the pc (JOKE. just crashes the executable.)", crash_pc_command));
+    registry.addCommand(Command("clean", "Clean build artifacts and dependencies", clean_command));
+    registry.addCommand(Command("search", "Search for a dependency on github", search_command));
+    registry.addCommand(Command("add", "Add a dependency (author/repo@version)", add_command));
+    registry.addCommand(Command("publish", "Publish the package to github", publish_command));
+    registry.addCommand(Command("cmake", "cmake compatibility command.", create_cmakelists));
+    registry.addCommand(Command("git", "github integration inside of cppkg!", git_command));
+    registry.addCommand(Command("version", "Print the version of cppkg", version_command));
+    registry.addCommand(Command("workspace", "Manage workspaces", workspace_command));
+    registry.addCommand(Command("init", "Initialize a new package", init_command));
+    registry.addCommand(Command("remove", "Remove a dependency", remove_command));
+    registry.addCommand(Command("build", "Build the package", Build_command));
+    registry.addCommand(Command("run", "Run the package", run_command));
+    registry.addCommand(Command("help", "Show help", help_command));
+
 }
 
 /// just look it up in google if you dont know what this does.

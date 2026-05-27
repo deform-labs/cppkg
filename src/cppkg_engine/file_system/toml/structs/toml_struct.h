@@ -5,6 +5,7 @@
     #include <unordered_map>
     #include <sstream>
     #include <string>
+    #include <vector>
 
     namespace cppkg {
         struct Toml {

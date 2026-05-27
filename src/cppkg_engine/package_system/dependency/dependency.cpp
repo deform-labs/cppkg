@@ -183,7 +183,7 @@ bool dependency_impl::fetch_all(const std::string& project_root) {
     LockFile lock(project_root + "/cppkg.lock");  // add this
 
     for (const auto& dep : deps) {
-        std::string dest = GithubClient::dep_path(dep.repo, "target/deps");
+        std::string dest = github::dep_path(dep.repo, "target/deps");
 
         if (fs::exists(dest)) {
             std::cout << ux::color::cyan << "Already fetched: " << dep.name << ux::color::reset << "\n";

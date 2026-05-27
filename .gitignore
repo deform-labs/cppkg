@@ -1,3 +1,4 @@
 builds/
-build/
+target/
 .cppkg/
+*.obj
