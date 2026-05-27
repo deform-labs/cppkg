@@ -1,6 +1,6 @@
 #include "../../file_system/toml/parser/toml_parser.h"
 #include "../../file_system/lock/lock_file.h"
-#include "../../misc/UX/color.h"
+#include "../../misc/ux/color.h"
 #include "../github/github.h"
 #include "dependency.h"
 #include <filesystem>
