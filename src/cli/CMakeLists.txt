@@ -1,14 +1,25 @@
 cmake_minimum_required(VERSION 3.10)
-project(cppkg)
+project(cppkg_cli)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-file(GLOB_RECURSE SOURCES
-     "src/*.cpp"
-     "src/**/*.cpp"
+# Collect CLI source files
+file(GLOB_RECURSE CLI_SOURCES "*.cpp")
+
+add_executable(cppkg ${CLI_SOURCES})
+
+# Link dependencies
+target_link_libraries(cppkg
+    PRIVATE
+        cppkg_engine
+        cppkg_api
 )
 
-add_executable(cppkg ${SOURCES})
-target_include_directories(cppkg PRIVATE src)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Include paths
+target_include_directories(cppkg
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src/api
+        ${CMAKE_SOURCE_DIR}/src/cppkg_engine
+)

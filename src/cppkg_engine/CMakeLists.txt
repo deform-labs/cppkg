@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Collect all engine source files
 file(GLOB_RECURSE ENGINE_SOURCES
-    "*.cpp"
-    "*.h"
+    "src/*.cpp"
+    "src/*.h"
+    "src/**/*.h"
+    "src/**/*.cpp"
 )
 
 add_library(cppkg_engine STATIC ${ENGINE_SOURCES})
