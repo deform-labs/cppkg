@@ -3,7 +3,7 @@
 #include <vector>
 
 namespace cppkg {
-    class HandlePackage {
+    class package {
         public:
 
             void create_package(const std::string& name);

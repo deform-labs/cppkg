@@ -1,13 +1,12 @@
-#include "../cppkg_engine/cppkg_engine.h"
-#include "../api/version/version.h"
+#include "../../cppkg_engine/src/cppkg_engine.h"
+#include "../../api/src/version/version.h"
 #include <algorithm>
 #include <iostream>
 #include <cstdlib>
 #include <vector>
 #include <string>
 
-
-cppkg::HandlePackage handlePackage;
+cppkg::package cli_package;
 cppkg::command_system cli_cmd;
 cppkg::github cli_git;
 cppkg::build cli_build;
@@ -38,7 +37,7 @@ void* workspace_command(int argc, char* argv[]) {
 
     if (sub == "init") {
         check_arguments(argc, 4, "Usage: cppkg workspace init <name>");
-        handlePackage.create_workspace(argv[3]);
+        cli_package.create_workspace(argv[3]);
     } else if (sub == "build") {
         if (argc >= 4) {
             cli_build.build_project(argv[3]);
@@ -87,7 +86,7 @@ void* clean_command(int argc, char* argv[]) {
 };
 
 /// builds the project
-void* Build_command(int argc, char* argv[]) {
+void* build_command(int argc, char* argv[]) {
     std::string path = ".";
     if (argc >= 3) path = argv[2];
     else (void)argv;
@@ -124,8 +123,8 @@ void* help_command(int argc, char* argv[]) {
 
 /// initialize this ahh
 void* init_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg init <project-name>");
-    handlePackage.create_package(argv[2]);
+    check_arguments(argc, 3, "Usage: cppkg init <name>");
+    cli_package.create_package(argv[2]);
     return nullptr;
 };
 
@@ -242,26 +241,46 @@ void* create_cmakelists(int argc, char* argv[]) {
     return nullptr;
 }
 
+std::string crash_desc = "crash the pc (JOKE. just crashes the executable.)\n";
+std::string clean_desc = "Clean build artifacts and dependencies\n";
+std::string search_desc = "Search for a dependency on github\n"
+                          "   e.g. cppkg search fmt\n";
+
+std::string add_desc = "Add a dependency (author/repo@version)\n"
+                       "   e.g. cppkg add fmtlib/fmt@10.1.0\n"
+                       "   --https  force HTTPS instead of SSH\n";
+
+std::string publish_desc = "Publish the package to github";
+std::string cmake_desc = "cmake compatibility command.";
+std::string git_desc = "github integration inside of cppkg!";
+std::string version_desc = "Print the version of cppkg";
+std::string workspace_desc = "Manage workspaces";
+std::string new_desc = "Initialize a new package";
+std::string remove_desc = "Remove a dependency";
+std::string build_desc = "Build the package";
+std::string run_desc = "Run the package";
+std::string help_desc = "Display this help message";
+
 /*
  * just adds base commands to the registry
  * if you didnt already understand it idk whats in your brain
  */
 void INITIALIZE(CommandRegistry& registry) {
     //descending spiral. just how i like it.
-    registry.addCommand(Command("crash", "crash the pc (JOKE. just crashes the executable.)", crash_pc_command));
-    registry.addCommand(Command("clean", "Clean build artifacts and dependencies", clean_command));
-    registry.addCommand(Command("search", "Search for a dependency on github", search_command));
-    registry.addCommand(Command("add", "Add a dependency (author/repo@version)", add_command));
-    registry.addCommand(Command("publish", "Publish the package to github", publish_command));
-    registry.addCommand(Command("cmake", "cmake compatibility command.", create_cmakelists));
-    registry.addCommand(Command("git", "github integration inside of cppkg!", git_command));
-    registry.addCommand(Command("version", "Print the version of cppkg", version_command));
-    registry.addCommand(Command("workspace", "Manage workspaces", workspace_command));
-    registry.addCommand(Command("init", "Initialize a new package", init_command));
-    registry.addCommand(Command("remove", "Remove a dependency", remove_command));
-    registry.addCommand(Command("build", "Build the package", Build_command));
-    registry.addCommand(Command("run", "Run the package", run_command));
-    registry.addCommand(Command("help", "Show help", help_command));
+    registry.addCommand(Command("crash", crash_desc, crash_pc_command));
+    registry.addCommand(Command("clean", clean_desc, clean_command));
+    registry.addCommand(Command("search", search_desc, search_command));
+    registry.addCommand(Command("add", add_desc, add_command));
+    registry.addCommand(Command("publish", publish_desc, publish_command));
+    registry.addCommand(Command("cmake", cmake_desc, create_cmakelists));
+    registry.addCommand(Command("git", git_desc, git_command));
+    registry.addCommand(Command("version", version_desc, version_command));
+    registry.addCommand(Command("workspace", workspace_desc, workspace_command));
+    registry.addCommand(Command("new", new_desc, init_command));
+    registry.addCommand(Command("remove", remove_desc, remove_command));
+    registry.addCommand(Command("build", build_desc, build_command));
+    registry.addCommand(Command("run", run_desc, run_command));
+    registry.addCommand(Command("help", help_desc, help_command));
 
 }
 
@@ -269,7 +288,10 @@ void INITIALIZE(CommandRegistry& registry) {
 int main(int argc, char* argv[]) {
     INITIALIZE(registry);
 
-    check_arguments(argc, 2, "Usage: cppkg <command>");
+    if (argc < 2) {
+        help_command(argc, argv);
+        return 0;
+    }
 
     try {
         registry.executeCommand(argv[1], argc, argv);

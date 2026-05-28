@@ -1,5 +1,5 @@
 #pragma once
-#include "../../cppkg_engine/cppkg_engine.h"
+#include "../../../cppkg_engine/src/cppkg_engine.h"
 #include <string>
 
 
@@ -13,4 +13,4 @@ inline std::string get_git_commit() {
     // Trim trailing new‑line characters.
     while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) out.pop_back();
     return out;
-}
+};

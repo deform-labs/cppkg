@@ -11,7 +11,7 @@ toml_parser toml_;
 
 /// Create a package with the given name (NO SHIT SHERLOCK)
 /// btw we arent amazon if you want a package at your door instead of your executable try ebay or something like that
-void HandlePackage::create_package(const std::string& name) {
+void package::create_package(const std::string& name) {
     namespace fs = std::filesystem;
 
     bool in_workspace = fs::exists("cppkg.toml");
@@ -69,7 +69,7 @@ void HandlePackage::create_package(const std::string& name) {
 
 /// Create a workspace with the given name (NO SHIT SHERLOCK)
 /// workspace? Arent you already working at one?
-void HandlePackage::create_workspace(const std::string& name) {
+void package::create_workspace(const std::string& name) {
     namespace fs = std::filesystem;
     fs::create_directories(name);
 
@@ -88,7 +88,7 @@ void HandlePackage::create_workspace(const std::string& name) {
 
 /// requires delicacy to use ಠ_ಠ !!!!!!!!
 /// soft like baby shit.
-void HandlePackage::add_dependency(const std::string& package) {
+void package::add_dependency(const std::string& package) {
     size_t at = package.find('@');
     if (at == std::string::npos)
         throw std::runtime_error("Invalid format, expected: <package>@<version>");
@@ -120,7 +120,7 @@ void HandlePackage::add_dependency(const std::string& package) {
 
 /// delicate yes.
 /// brute force? yes.
-void HandlePackage::remove_dependency(const std::string& package) {
+void package::remove_dependency(const std::string& package) {
     std::string pkg_name = package;
     size_t at = package.find('@');
     if (at != std::string::npos)
