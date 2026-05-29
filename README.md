@@ -139,5 +139,15 @@ please look at the source files to understand the layout.
  
 - No conflict resolution for transitive dependencies
 ## License
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=deform-labs%2Fcppkg&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=deform-labs/cppkg&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=deform-labs/cppkg&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=deform-labs/cppkg&type=date&legend=top-left" />
+ </picture>
+</a>
  
 MIT
