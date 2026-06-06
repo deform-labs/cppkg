@@ -12,6 +12,7 @@ cppkg::github cli_git;
 cppkg::build cli_build;
 
 CommandRegistry registry;
+namespace fs = std::filesystem;
 
 /// dumbfuck if you cant understand ts
 void handle_error(const std::runtime_error& e) {
@@ -66,10 +67,10 @@ void* version_command(int argc, char* argv[]) {
 
 /// remove command lmao ima remove this spike from your ass
 void* remove_command(int argc, char* argv[]) {
-    (void)argc;
+    check_arguments(argc, 3, "Usage: cppkg remove <author/repo>");
     std::string name = argv[2];
     cppkg::dependency_impl deps;
-    deps.remove(name);
+    deps.remove(name, fs::current_path().string());
     return nullptr;
 };
 
@@ -113,8 +114,24 @@ void* help_command(int argc, char* argv[]) {
     /// I CHOOSE DEATH!
     for (const Command& cmd : registry.commands) {
         std::string padding(max_len - cmd.name.size() + 2, ' ');
+        std::string indent = "   " + std::string(max_len + 5, ' '); // For subsequent lines
+
+        // Split description into lines
+        std::vector<std::string> lines;
+        std::stringstream ss(cmd.description);
+        std::string line;
+        while (std::getline(ss, line)) {
+            lines.push_back(line);
+        }
+
+        // Print first line with name and padding
         std::cout << "   " << cppkg::ux::color::yellow << cmd.name << cppkg::ux::color::reset
-                  << padding << "- " << cmd.description << "\n";
+                << padding << "- " << lines[0] << "\n";
+
+        // Print remaining lines with indentation
+        for (size_t i = 1; i < lines.size(); ++i) {
+            std::cout << indent << lines[i] << "\n";
+        }
     }
 
     std::cout << "\n";
@@ -161,6 +178,7 @@ void* git_command(int argc, char* argv[]) {
 
 /// add command lmao ima add this spike up your ass
 void* add_command(int argc, char* argv[]) {
+    check_arguments(argc, 3, "Usage: cppkg add <author/repo>@<version>");
     bool https = false;
     std::string spec = argv[2];
     for (int i = 3; i < argc; ++i) {
@@ -172,7 +190,7 @@ void* add_command(int argc, char* argv[]) {
                       << cppkg::ux::color::reset << "\n";
     }
     cppkg::dependency_impl deps(https);
-    deps.add(spec);
+    deps.add(spec, fs::current_path().string());
     return nullptr;
 };
 
@@ -241,16 +259,30 @@ void* create_cmakelists(int argc, char* argv[]) {
     return nullptr;
 }
 
+void* create_alias(int argc, char* argv[]) {
+    check_arguments(argc, 4, "Not enough arguments passed! \n   Example: cppkg alias <name> <command>");
+
+    auto& alias_manager = cppkg::alias::get();
+    alias_manager.add_alias(argv[2], argv[3]);
+
+    std::cout << cppkg::ux::color::green << "Alias created: " << argv[2]
+              << " -> " << argv[3] << cppkg::ux::color::reset << "\n";
+    return nullptr;
+}
+
 std::string crash_desc = "crash the pc (JOKE. just crashes the executable.)\n";
 std::string clean_desc = "Clean build artifacts and dependencies\n";
 std::string search_desc = "Search for a dependency on github\n"
-                          "   e.g. cppkg search fmt\n";
+                          " - e.g. cppkg search fmt\n";
 
 std::string add_desc = "Add a dependency (author/repo@version)\n"
-                       "   e.g. cppkg add fmtlib/fmt@10.1.0\n"
-                       "   --https  force HTTPS instead of SSH\n";
+                       " - e.g. cppkg add fmtlib/fmt@10.1.0\n"
+                       " - --https  force HTTPS instead of SSH\n";
 
-std::string publish_desc = "Publish the package to github";
+std::string publish_desc = "Publish the package to github\n"
+                           " - --message <message>  commit message for the release\n"
+                           " - --notes <path>  use a markdown file for the release note\n";
+
 std::string cmake_desc = "cmake compatibility command.";
 std::string git_desc = "github integration inside of cppkg!";
 std::string version_desc = "Print the version of cppkg";
@@ -260,6 +292,9 @@ std::string remove_desc = "Remove a dependency";
 std::string build_desc = "Build the package";
 std::string run_desc = "Run the package";
 std::string help_desc = "Display this help message";
+std::string alias_desc = "Manage command aliases\n"
+                         " - <name> name of the alias\n"
+                         " - <command> command to alias";
 
 /*
  * just adds base commands to the registry
@@ -281,10 +316,40 @@ void INITIALIZE(CommandRegistry& registry) {
     registry.addCommand(Command("build", build_desc, build_command));
     registry.addCommand(Command("run", run_desc, run_command));
     registry.addCommand(Command("help", help_desc, help_command));
-
+    registry.addCommand(Command("alias", alias_desc, create_alias));
 }
 
-/// just look it up in google if you dont know what this does.
+int execute_command(int argc, char* argv[]) {
+    std::string command_name = argv[1];
+    std::vector<std::string> command_args;
+    for (int i = 2; i < argc; ++i) command_args.push_back(argv[i]);
+
+    auto& alias_manager = cppkg::alias::get();
+
+    if (alias_manager.is_alias(command_name)) {
+        std::string real_command = alias_manager.get_command(command_name);
+        std::cout << "Expanding alias: " << command_name << " -> " << real_command << std::endl;
+
+        // Parse real_command
+        std::vector<std::string> expanded;
+        std::stringstream ss(real_command);
+        std::string token;
+        while (ss >> token) expanded.push_back(token);
+
+        if (!expanded.empty()) {
+            command_name = expanded[0];
+            command_args.clear();
+            for (size_t i = 1; i < expanded.size(); ++i) {
+                command_args.push_back(expanded[i]);
+            }
+        }
+    }
+
+    // Execute the command
+    registry.executeCommand(command_name, command_args);
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
     INITIALIZE(registry);
 
@@ -294,7 +359,7 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        registry.executeCommand(argv[1], argc, argv);
+        return execute_command(argc, argv);
     } catch (const std::runtime_error& e) {
         handle_error(e);
         return 1;

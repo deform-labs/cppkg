@@ -25,7 +25,18 @@ void compiler::build_base_command() {
     build_command_.push_back(config_.compiler_path);
 
     if (msvc) {
-        build_command_.push_back("/std:c++17");
+        // MSVC /std: flag mapping
+        // Input may be "17", "20", "23", "c++17", "c++20", "c++23", "c++latest"
+        std::string raw = config_.cpp_std;
+        // Strip leading "c++" if present
+        std::string ver = (raw.size() > 3 && raw.substr(0, 3) == "c++") ? raw.substr(3) : raw;
+        std::string msvc_std;
+        if (ver == "14") msvc_std = "/std:c++14";
+        else if (ver == "17") msvc_std = "/std:c++17";
+        else if (ver == "20") msvc_std = "/std:c++20";
+        else if (ver == "23" || ver == "latest") msvc_std = "/std:c++latest";
+        else msvc_std = "/std:c++17"; // safe fallback
+        build_command_.push_back(msvc_std);
         build_command_.push_back("/EHsc");
         build_command_.push_back("/nologo");
     } else {
@@ -138,8 +149,10 @@ int compiler::compile(const std::string& source_file, const std::string& output_
         std::cout << ux::color::cyan << "COMMAND: " << quote(command_str) << ux::color::reset << std::endl;
 
     int result = compiler_shell_.run_quiet(command_str);
-    if (result == 1)
+    if (result != 0) {
+        // Print compiler errors by re-running without suppression
         compiler_shell_.run(command_str);
+    }
 
     store_cache(source_file, obj_file);
 

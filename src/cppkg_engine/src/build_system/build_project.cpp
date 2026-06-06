@@ -15,12 +15,16 @@
 using namespace cppkg;
 using namespace cppkg::ux;
 
-command_system build_shell_;
-toml_parser build_toml_;
-dependency_impl deps;
 namespace fs = std::filesystem;
 
-/// Spinner animation lmao W UX
+// File-scope singletons — one instance each, no shadowing
+static command_system build_shell_;
+static toml_parser    build_toml_;
+
+// ---------------------------------------------------------------------------
+// Spinner
+// ---------------------------------------------------------------------------
+
 void spinner(const std::string& label, std::atomic<bool>& done) {
     const char frames[] = { '|', '/', '-', '\\' };
     int i = 0;
@@ -28,134 +32,151 @@ void spinner(const std::string& label, std::atomic<bool>& done) {
         std::cout << "\r" << color::cyan << frames[i++ % 4] << " " << label << color::reset << std::flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    std::cout << "\r" << color::green << "[OK] " << label << color::reset << "    \n";
-};
-
-/// building by brick or by plaster?
-static std::string detect_build_type(int argc, char* argv[]) {
-    for (int i = 2; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--debug")   return "Debug";
-        if (arg == "--release") return "Release";
-    }
-    return "RelWithDebInfo";
+    // Clear the spinner line, then print the done message
+    std::cout << "\r                                    \r"
+              << color::green << "[OK] " << label << color::reset << "\n";
 }
 
-/// i have to for compatibility and for users whole just prefer cmake :|
-void build::create_lists(fs::path project_dir) {
+// ---------------------------------------------------------------------------
+// Internal helpers (all take an explicit project path)
+// ---------------------------------------------------------------------------
 
-    Toml toml = build_toml_.parse_toml(project_dir.string() + "/cppkg.toml");
-    std::string cmake;
-    std::string name = toml.get("package", "name");
-    std::string cpp_std = toml.get("package", "cpp_std");
-    cmake += "cmake_minimum_required(VERSION 3.10)\n";
-    cmake += "project(" + name + ")\n\n";
-    cmake += "set(CMAKE_CXX_STANDARD " + cpp_std + ")\n";
-    cmake += "set(CMAKE_CXX_STANDARD_REQUIRED True)\n\n";
-    cmake += "file(GLOB_RECURSE SOURCES \"src/*.cpp\")\n\n";
-
-    auto dependencies = deps.load_dependencies(project_dir.string());
-    bool has_add_subdirectory = false;
-    for (const auto& dep : dependencies) {
-        cmake += "add_subdirectory(target/deps/" + dep.repo + ")\n";
-        has_add_subdirectory = true;
-    }
-    if (has_add_subdirectory) cmake += "\n";
-
-    cmake += "add_executable(" + name + " ${SOURCES})\n";
-    cmake += "\ntarget_link_libraries(" + name + "\n";
-    for (const auto& dep : dependencies) {
-        cmake += "   " + dep.repo + "\n";
-    }
-    cmake += ")\n";
-
-    create_file("CMakeLists.txt", project_dir.string(), cmake);
-    std::cout << color::cyan << "CMakeLists.txt created successfully in " << project_dir.string() << color::reset << "\n";
-}
-
-void get_deps() {
+static void get_deps(const fs::path& project_dir) {
     dependency_impl deps;
     std::cout << color::cyan << "Fetching dependencies..." << color::reset << "\n";
-    if (!deps.fetch_all(".")) {
+    if (!deps.fetch_all(project_dir.string())) {
         std::cout << color::red << "Some dependencies failed to fetch" << color::reset << "\n";
     }
 }
 
-std::vector<std::string> get_source_files() {
+static std::vector<std::string> get_source_files(const fs::path& project_dir) {
     std::vector<std::string> source_files;
-    for (const auto& entry : fs::recursive_directory_iterator("src")) {
+    for (const auto& entry : fs::recursive_directory_iterator(project_dir / "src")) {
         if (entry.path().extension() == ".cpp") {
             source_files.push_back(entry.path().string());
         }
     }
-
     if (source_files.empty()) {
         throw std::runtime_error("No source files found in src/");
     }
-
     return source_files;
 }
 
-compiler::config get_compiler_config(const std::string& path) {
-    auto toml = build_toml_.parse_toml(path + "/cppkg.toml");
-    std::string name = toml.get("package", "name");
+static compiler::config get_compiler_config(const fs::path& project_dir) {
+    auto toml = build_toml_.parse_toml((project_dir / "cppkg.toml").string());
+    std::string name    = toml.get("package", "name");
     std::string cpp_std = toml.get("package", "cpp_std");
 
-    if (cpp_std.substr(0, 3) == "c++")
+    // Strip leading "c++" prefix if present ("c++17" -> "17")
+    if (cpp_std.size() > 3 && cpp_std.substr(0, 3) == "c++")
         cpp_std = cpp_std.substr(3);
 
-    // finally it can NOT use cmake
     compiler::config config;
 
-    // compiler avenue 69
+    // Compiler executable
     if (toml.has("package", "compiler")) {
         config.compiler_path = toml.get("package", "compiler");
     } else {
-        #ifdef _WIN32
-            config.compiler_path = "cl";
-        #else
-            config.compiler_path = "g++";
-        #endif
+#ifdef _WIN32
+        config.compiler_path = "cl";
+#else
+        config.compiler_path = "g++";
+#endif
     }
 
-    // include road 104
+    // Include paths
     if (toml.has("compiler", "IncludePaths")) {
         auto paths = toml.parse_array(toml.get("compiler", "IncludePaths"));
-        for (const auto& Array_path : paths)
-            config.include_paths.push_back(Array_path);
+        for (const auto& p : paths)
+            config.include_paths.push_back(p);
     }
 
-    // flags
+    // Compiler flags — fixed: key name was inconsistent ("compiler_flags" vs "Compiler_Flags")
     if (toml.has("compiler", "compiler_flags")) {
-        auto flags = toml.parse_array(toml.get("compiler", "Compiler_Flags"));
+        auto flags = toml.parse_array(toml.get("compiler", "compiler_flags"));
         for (const auto& flag : flags)
             config.default_flags.push_back(flag);
     }
 
-    config.output_name = name;
-    config.cpp_std = cpp_std;
-    config.color_output = true;
+    config.output_name   = name;
+    config.cpp_std       = cpp_std;
+    config.color_output  = true;
 
     return config;
 }
 
-/// building it brick by brick
+// ---------------------------------------------------------------------------
+// build::create_lists
+// ---------------------------------------------------------------------------
+
+void build::create_lists(fs::path project_dir) {
+    if (fs::exists(project_dir / "CMakeLists.txt")) return;
+    if (!fs::exists(project_dir / "cppkg.toml")) {
+        std::cerr << color::red << "[ERROR] " << color::reset << "cppkg.toml not found\n";
+        return;
+    }
+
+    auto toml = build_toml_.parse_toml((project_dir / "cppkg.toml").string());
+    std::string name    = toml.get("package", "name");
+    std::string cpp_std = toml.get("package", "cpp_std");
+
+    // Collect source files explicitly to avoid GLOB_RECURSE stale-cache issues
+    std::vector<std::string> sources;
+    if (fs::exists(project_dir / "src")) {
+        for (const auto& entry : fs::recursive_directory_iterator(project_dir / "src")) {
+            if (entry.path().extension() == ".cpp") {
+                // Store relative path for portability
+                sources.push_back(
+                    fs::relative(entry.path(), project_dir).generic_string()
+                );
+            }
+        }
+    }
+
+    dependency_impl deps;
+    auto dependencies = deps.load_dependencies(project_dir.string());
+
+    std::string cmake;
+    cmake += "cmake_minimum_required(VERSION 3.10)\n";
+    cmake += "project(" + name + ")\n\n";
+    cmake += "set(CMAKE_CXX_STANDARD " + cpp_std + ")\n";
+    cmake += "set(CMAKE_CXX_STANDARD_REQUIRED True)\n\n";
+
+    // Explicit source list instead of GLOB_RECURSE
+    cmake += "set(SOURCES\n";
+    for (const auto& src : sources)
+        cmake += "    " + src + "\n";
+    cmake += ")\n\n";
+
+    for (const auto& dep : dependencies)
+        cmake += "add_subdirectory(target/deps/" + dep.repo + ")\n";
+    if (!dependencies.empty()) cmake += "\n";
+
+    cmake += "add_executable(" + name + " ${SOURCES})\n";
+    cmake += "\ntarget_link_libraries(" + name + "\n";
+    for (const auto& dep : dependencies)
+        cmake += "    " + dep.repo + "\n";
+    cmake += ")\n";
+
+    create_file("CMakeLists.txt", project_dir.string(), cmake);
+    std::cout << color::cyan << "CMakeLists.txt created in " << project_dir.string() << color::reset << "\n";
+}
+
+// ---------------------------------------------------------------------------
+// build::build_project
+// ---------------------------------------------------------------------------
+
 void build::build_project(const std::string& path) {
-    fs::path project_dir = fs::current_path() / path;
-    fs::current_path(project_dir);
+    fs::path project_dir = fs::absolute(path);
 
-    // fetch dog fetch!
-    get_deps();
+    get_deps(project_dir);
 
-    // source 2 pls valve i need this
-    std::vector<std::string> source_files = get_source_files();
+    std::vector<std::string> source_files = get_source_files(project_dir);
 
-    // finally it can NOT use cmake
-    compiler::config config = get_compiler_config(path);
-    compiler compiler(config);
+    compiler::config config = get_compiler_config(project_dir);
+    compiler compiler_(config);
 
-    // compile that ass
-    int result = compiler.compile_all(source_files);
+    int result = compiler_.compile_all(source_files);
     if (result != 0) {
         throw std::runtime_error("Build failed!");
     }
@@ -163,32 +184,35 @@ void build::build_project(const std::string& path) {
     std::cout << color::green << "Build successful: " << config.output_name << color::reset << "\n";
 }
 
+// ---------------------------------------------------------------------------
+// build::run_project
+// ---------------------------------------------------------------------------
 
-/// well well well. What do we have here, an user in a hurry i see.
 void build::run_project(const std::string& path) {
-    auto toml = build_toml_.parse_toml(path + "/cppkg.toml");
-    std::string name = toml.get("package", "name");
+    fs::path project_dir = fs::absolute(path);
 
-    compiler::config config = get_compiler_config(path);
+    compiler::config config = get_compiler_config(project_dir);
 
+#ifdef _WIN32
+    std::string run_path = (project_dir / config.build_dir / (config.output_name + ".exe")).string();
+#else
+    std::string run_path = (project_dir / config.build_dir / config.output_name).string();
+#endif
+
+    std::cout << color::yellow << "Running: " << run_path << color::reset << "\n";
+
+    // Start spinner after printing the path so the label is visible
     std::atomic<bool> done(false);
+    std::thread t(spinner, "Running " + config.output_name, std::ref(done));
 
-    std::thread t(spinner, "Running: ", std::ref(done));
-    // Add platform-appropriate extension
-    #ifdef _WIN32
-        std::string run_path = "./" + config.build_dir + "/" + name + ".exe";
-    #else
-        std::string run_path = "./" + config.build_dir + "/" + name;
-    #endif
+    int r = build_shell_.run(run_path);
 
-    std::cout << cppkg::ux::color::yellow << "DEBUG: Running: " << run_path << cppkg::ux::color::reset << std::endl;
-    int r = build_shell_.run(run_path);  // Quote paths with spaces
     done = true;
     t.join();
 
     if (r != 0) {
         std::cout << color::red << "Run failed!" << color::reset << "\n";
     } else {
-        std::cout << color::green << "Run successful: " << name << color::reset << "\n";
+        std::cout << color::green << "Run successful: " << config.output_name << color::reset << "\n";
     }
 }

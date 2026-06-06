@@ -1,6 +1,7 @@
 #ifndef REGISTRY_H
     #define REGISTRY_H
     #include <functional>
+    #include <iostream>
     #include <stdexcept>
     #include "command.h"
     #include <string>
@@ -15,14 +16,22 @@
         }
 
         /// same goes here lol
-        void executeCommand(const std::string& name, int argc, char* argv[]) {
-            for (const auto& command : commands) {
-                if (command.name == name) {
-                    command.execute(argc, argv);
+        // In CommandRegistry class
+        void executeCommand(const std::string& name, const std::vector<std::string>& args) {
+            for (const auto& cmd : commands) {
+                if (cmd.name == name) {
+                    // Build argv array
+                    std::vector<char*> argv;
+                    argv.push_back(const_cast<char*>(name.c_str()));
+                    for (const auto& arg : args) {
+                        argv.push_back(const_cast<char*>(arg.c_str()));
+                    }
+                    argv.push_back(nullptr);
+                    cmd.execute((int)argv.size() - 1, argv.data());
                     return;
                 }
             }
-            throw std::runtime_error("Command not found: " + name);
+            std::cout << "Command not found: " << name << std::endl;
         }
     };
 #endif // REGISTRY_H

@@ -125,6 +125,38 @@ bool github::push() {
 }
 
 
+/// simple helper: extract the string value of a JSON key from a substring
+static std::string json_string_field(const std::string& blob, const std::string& key, size_t from = 0) {
+    std::string needle = "\"" + key + "\"";
+    size_t kpos = blob.find(needle, from);
+    if (kpos == std::string::npos) return "";
+    size_t colon = blob.find(':', kpos + needle.size());
+    if (colon == std::string::npos) return "";
+    size_t vstart = blob.find_first_not_of(" \t\r\n", colon + 1);
+    if (vstart == std::string::npos) return "";
+    if (blob[vstart] == 'n') return ""; // null
+    if (blob[vstart] != '"') return ""; // not a string
+    vstart++;
+    std::string result;
+    for (size_t i = vstart; i < blob.size(); ++i) {
+        if (blob[i] == '\\' && i + 1 < blob.size()) { result += blob[++i]; continue; }
+        if (blob[i] == '"') break;
+        result += blob[i];
+    }
+    return result;
+}
+
+static int json_int_field(const std::string& blob, const std::string& key, size_t from = 0) {
+    std::string needle = "\"" + key + "\"";
+    size_t kpos = blob.find(needle, from);
+    if (kpos == std::string::npos) return 0;
+    size_t colon = blob.find(':', kpos + needle.size());
+    if (colon == std::string::npos) return 0;
+    size_t vstart = blob.find_first_not_of(" \t\r\n", colon + 1);
+    if (vstart == std::string::npos || !isdigit(blob[vstart])) return 0;
+    return std::stoi(blob.substr(vstart));
+}
+
 /// forked ts because i didnt know how the github api worked
 std::vector<search_result> github::search(const std::string& query) {
     std::string cmd = "curl -s \"https://api.github.com/search/repositories"
@@ -133,35 +165,32 @@ std::vector<search_result> github::search(const std::string& query) {
     std::string output = shell_.run_with_output(cmd);
     if (output.empty()) return {};
 
-    // parse json manually - no deps
     std::vector<search_result> results;
     size_t pos = 0;
 
+    // Each repository object starts after a "full_name" key; walk through them
     while ((pos = output.find("\"full_name\"", pos)) != std::string::npos) {
-        size_t start = output.find('"', pos + 12) + 1;
-        size_t end   = output.find('"', start);
-        std::string full_name = output.substr(start, end - start);
+        // Find the enclosing object: walk back to the nearest '{'
+        size_t obj_start = output.rfind('{', pos);
+        if (obj_start == std::string::npos) { pos++; continue; }
 
-        size_t desc_pos = output.find("\"description\"", pos);
-        std::string description;
-        if (desc_pos != std::string::npos) {
-            size_t ds = output.find('"', desc_pos + 14);
-            if (output[ds + 1] != 'n') { // not null
-                ds++;
-                size_t de = output.find('"', ds + 1);
-                description = output.substr(ds, de - ds);
-            }
+        // Find the matching '}' (shallow — repos don't nest deeply here)
+        int depth = 0;
+        size_t obj_end = obj_start;
+        for (size_t i = obj_start; i < output.size(); ++i) {
+            if (output[i] == '{') depth++;
+            else if (output[i] == '}') { if (--depth == 0) { obj_end = i; break; } }
         }
+        std::string obj = output.substr(obj_start, obj_end - obj_start + 1);
 
-        size_t stars_pos = output.find("\"stargazers_count\"", pos);
-        int stars = 0;
-        if (stars_pos != std::string::npos) {
-            size_t sv = stars_pos + 19;
-            stars = std::stoi(output.substr(sv, output.find(',', sv) - sv));
-        }
+        std::string full_name   = json_string_field(obj, "full_name");
+        std::string description = json_string_field(obj, "description");
+        int         stars       = json_int_field(obj, "stargazers_count");
 
-        results.push_back({ full_name, description, stars });
-        pos = end;
+        if (!full_name.empty())
+            results.push_back({ full_name, description, stars });
+
+        pos = obj_end + 1;
     }
 
     return results;
@@ -219,19 +248,38 @@ bool github::publish(const std::string& version, const std::string& message, con
         repo.pop_back();
 
     // step 5: create github release via api
+    // JSON body and token go through temp files so neither appears in the process list.
     std::cout << ux::color::cyan << "Creating GitHub release..." << ux::color::reset << "\n";
-    std::string body = "{\\\"tag_name\\\":\\\"v" + version + "\\\","
-                   "\\\"name\\\":\\\"v" + version + "\\\","
-                   "\\\"body\\\":\\\"" + message + "\\\"}";
+
+    std::string body_json = "{\"tag_name\":\"v" + version + "\","
+                            "\"name\":\"v" + version + "\","
+                            "\"body\":\"" + message + "\"}";
+
+    namespace fs_tmp = std::filesystem;
+    std::string tmp_body   = (fs_tmp::temp_directory_path() / "cppkg_release_body.json").string();
+    std::string tmp_config = (fs_tmp::temp_directory_path() / "cppkg_curl.cfg").string();
+
+    {
+        std::ofstream body_file(tmp_body);
+        body_file << body_json;
+    }
+    {
+        // curl config file: keeps the token out of argv / ps output
+        std::ofstream cfg_file(tmp_config);
+        cfg_file << "header = \"Authorization: token " << token << "\"\n";
+        cfg_file << "header = \"Content-Type: application/json\"\n";
+    }
 
     std::string curl_cmd =
         "curl -s -X POST "
         "https://api.github.com/repos/" + owner + "/" + repo + "/releases "
-        "-H \"Authorization: token " + token + "\" "
-        "-H \"Content-Type: application/json\" "
-        "-d \"" + body + "\"";
+        "--config " + tmp_config + " "
+        "--data @" + tmp_body;
 
     std::string response = shell_.run_with_output(curl_cmd);
+
+    std::remove(tmp_body.c_str());
+    std::remove(tmp_config.c_str());
 
     // check if release was created
     if (response.find("\"id\"") != std::string::npos) {

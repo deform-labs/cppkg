@@ -18,4 +18,5 @@
 
     #include "structs/command.h"
     #include "structs/registry.h"
+    #include "caller/alias.h"
 #endif
