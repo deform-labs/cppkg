@@ -21,10 +21,6 @@ Just don't delete Line 777. That's sacred.
 - Visual Studio 2022 Build Tools
 - C++20
 
-# ONLY 1 shell.
-
-if the shell is necessary. use it from the_shell.
-
 ## Building from source
 
 ```powershell
@@ -38,28 +34,7 @@ The output binary will be at `build/Debug/cppkg.exe`.
 
 ## Project structure
 
-```
-src/
-├── main.cpp                        # entry point, command registration
-├── commands.h                      # Command and CommandRegistry structs
-├── commands/
-│   ├── handle_package.cpp          # init, add, remove logic
-│   ├── build.cpp                   # build command logic
-│   ├── workspace.cpp               # workspace logic
-│   └── helpers/
-│       ├── color.h                 # ANSI color constants
-│       └── create_file.h           # file creation utility
-└── include/
-    ├── handle_package/
-    │   └── handle_package.h
-    ├── build/
-    │   └── build.h
-    ├── workspace/
-    │   └── workspace.h
-    └── toml/
-        ├── toml.h                  # Toml / TomlSection / TomlValue structs
-        └── toml_parser.h           # parse_toml() and parse_array()
-```
+cmon man just look at the source files, the names are pretty self explanatory
 
 ## Adding a new command
 
