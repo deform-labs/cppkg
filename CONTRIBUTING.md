@@ -1,3 +1,5 @@
+**file might not be fully up-to-date, please contact [@twelve_seconds.left] for info or just asking questions.**
+
 # Contributing to cppkg
 
 Thanks for your interest in contributing. This document covers how to get set up and how the codebase is structured.
