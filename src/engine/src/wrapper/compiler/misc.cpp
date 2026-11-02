@@ -1,5 +1,5 @@
 #include "compiler.h"
-#include "../misc/ux/color.h"  // or wherever it lives
+#include "misc/ux/color.h"  // or wherever it lives
 #include <iostream>
 
 /// compile the source code of the package

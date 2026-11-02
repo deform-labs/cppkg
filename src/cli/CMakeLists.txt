@@ -21,5 +21,5 @@ target_include_directories(cppkg
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/api
-        ${CMAKE_SOURCE_DIR}/src/cppkg_engine
+        ${CMAKE_SOURCE_DIR}/src/engine
 )

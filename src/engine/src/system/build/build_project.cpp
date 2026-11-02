@@ -1,9 +1,9 @@
-#include "../file_system/toml/parser/toml_parser.h"
-#include "../package_system/package_system.h"
-#include "../command_system/command_system.h"
-#include "../misc/file_system/create_file.h"
-#include "../compiler_wrapper/compiler.h"
-#include "../misc/ux/color.h"
+#include "system/filesystem/toml/parser/toml_parser.h"
+#include "system/package/package_system.h"
+#include "system/command/command_system.h"
+#include "misc/file_system/create_file.h"
+#include "wrapper/compiler/compiler.h"
+#include "misc/ux/color.h"
 #include "build_project.h"
 #include <filesystem>
 #include <iostream>

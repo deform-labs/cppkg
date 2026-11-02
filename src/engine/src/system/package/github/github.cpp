@@ -1,5 +1,5 @@
-#include "../../command_system/command_system.h"
-#include "../../misc/ux/color.h"
+#include "system/command/command_system.h"
+#include "misc/ux/color.h"
 #include <filesystem>
 #include <iostream>
 #include "github.h"

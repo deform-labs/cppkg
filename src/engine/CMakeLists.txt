@@ -16,7 +16,7 @@ add_library(cppkg_engine STATIC ${ENGINE_SOURCES})
 
 target_include_directories(cppkg_engine
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}  # For internal includes
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 # Optional: expose API for external use

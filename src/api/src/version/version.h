@@ -1,9 +1,9 @@
 #pragma once
-#include "../../../cppkg_engine/src/cppkg_engine.h"
+#include "../../../engine/src/cppkg_engine.h"
 #include <string>
 
 
-/// get the day the guy committed war crimes.
+/// Get the current Git commit hash (short version) for the repository.
 inline std::string get_git_commit() {
     cppkg::command_system shell_;
     // `git rev-parse --short HEAD` gives a short 7‑character hash.

@@ -1,325 +1,232 @@
-#include "../../cppkg_engine/src/cppkg_engine.h"
+#include "../../engine/src/cppkg_engine.h"
 #include "../../api/src/version/version.h"
 #include <algorithm>
-#include <iostream>
 #include <cstdlib>
-#include <vector>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
-cppkg::package cli_package;
-cppkg::command_system cli_cmd;
-cppkg::github cli_git;
-cppkg::build cli_build;
+cppkg::package CliPackage;
+cppkg::command_system CliCmd;
+cppkg::github CliGit;
+cppkg::build CliBuild;
 
-CommandRegistry registry;
+CommandRegistry Registry;
 namespace fs = std::filesystem;
 
-/// dumbfuck if you cant understand ts
-void handle_error(const std::runtime_error& e) {
-    std::cout << cppkg::ux::color::red << e.what() << cppkg::ux::color::reset << std::endl;
+void HandleError(const std::exception& e) {
+    std::cerr << cppkg::ux::color::red << e.what()
+              << cppkg::ux::color::reset << '\n';
 }
 
-/// ok so this one might need an explanation but it's pretty self-explanatory for amateurs B)
-/// for dumbasses: it checks the amount of arguments against the minimum required
-void check_arguments(int argc, int min_args, const std::string& usage) {
-    if (argc < min_args) {
-        std::cout << cppkg::ux::color::green << usage << cppkg::ux::color::reset << "\n";
-        exit(1);
-    }
+void CheckArguments(int argc, int min_args, const std::string& usage) {
+    if (argc < min_args)
+        throw std::runtime_error(usage);
 }
 
-/// OOH COMMANDS OHHH
-/// Had to fix these comments because on github they looked off :|
-
-/// workspaces everywhere employment for everbody!
-void* workspace_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg workspace <init|build> <name>");
-    std::string sub = argv[2];
+void* WorkspaceCommand(int argc, char* argv[]) {
+    CheckArguments(argc, 2, "Usage: cppkg workspace <init|build> [name]");
+    std::string sub = argv[1];
 
     if (sub == "init") {
-        check_arguments(argc, 4, "Usage: cppkg workspace init <name>");
-        cli_package.create_workspace(argv[3]);
+        CheckArguments(argc, 3, "Usage: cppkg workspace init <name>");
+        CliPackage.create_workspace(argv[2]);
     } else if (sub == "build") {
-        if (argc >= 4) {
-            cli_build.build_project(argv[3]);
-        } else {
-            cli_build.build_project(".");
-        }
+        CliBuild.build_project(argc >= 3 ? argv[2] : ".");
+    } else {
+        throw std::runtime_error("Unknown workspace command: " + sub);
     }
 
     return nullptr;
-};
+}
 
-/// actually fucking destroys your pc (doesnt do that obv it just segmentation faults)
-void* crash_pc_command(int argc, char* argv[]) {
+void* VersionCommand(int argc, char* argv[]) {
     (void)argc; (void)argv;
-    int* ptr = nullptr;
-    *ptr = -1;
-    return ptr;
-};
-
-/// commit number WHAT?
-void* version_command(int argc, char* argv[]) {
-    (void)argc; (void)argv;
-    std::cout << cppkg::ux::color::cyan << "cppkg version " << get_git_commit() << cppkg::ux::color::reset << std::endl;
+    std::cout << cppkg::ux::color::cyan << "cppkg version " << get_git_commit()
+              << cppkg::ux::color::reset << '\n';
     return nullptr;
-};
+}
 
-/// remove command lmao ima remove this spike from your ass
-void* remove_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg remove <author/repo>");
-    std::string name = argv[2];
+void* RemoveCommand(int argc, char* argv[]) {
+    CheckArguments(argc, 2, "Usage: cppkg remove <author/repo>");
     cppkg::dependency_impl deps;
-    deps.remove(name, fs::current_path().string());
+    deps.remove(argv[1], fs::current_path().string());
     return nullptr;
-};
+}
 
-/// cleans yo buh hole
-void* clean_command(int argc, char* argv[]) {
-    std::string path = ".";
-    if (argc >= 3) path = argv[2];
-    else (void)argv;
+void* CleanCommand(int argc, char* argv[]) {
+    const fs::path path = argc >= 2 ? argv[1] : ".";
     cppkg::dependency_impl deps;
-    std::filesystem::remove_all(path + "/target");
-    deps.clean(path);
-    std::cout << cppkg::ux::color::green << "Cleaned build/target" << cppkg::ux::color::reset << "\n";
+    fs::remove_all(path / "target");
+    deps.clean(path.string());
+    std::cout << cppkg::ux::color::green << "Cleaned build/target"
+              << cppkg::ux::color::reset << '\n';
     return nullptr;
-};
+}
 
-/// builds the project
-void* build_command(int argc, char* argv[]) {
-    std::string path = ".";
-    if (argc >= 3) path = argv[2];
-    else (void)argv;
-    cli_build.build_project(path);
+void* BuildCommand(int argc, char* argv[]) {
+    CliBuild.build_project(argc >= 2 ? argv[1] : ".");
     return nullptr;
-};
+}
 
-/// helpp please!!!
-void* help_command(int argc, char* argv[]) {
+void* HelpCommand(int argc, char* argv[]) {
     (void)argc; (void)argv;
     std::cout << cppkg::ux::color::green << "Usage: cppkg <command> <args>\n\n" << cppkg::ux::color::reset;
     std::cout << cppkg::ux::color::cyan << "Available commands:\n" << cppkg::ux::color::reset;
 
-    if (registry.commands.empty()) {
+    if (Registry.commands.empty()) {
         std::cout << "   " << cppkg::ux::color::red << "(no commands registered)" << cppkg::ux::color::reset << "\n";
         return nullptr;
     }
 
-    // this comment was nuked by the turtle
     size_t max_len = 0;
-    for (const auto& cmd : registry.commands)
+    for (const auto& cmd : Registry.commands)
         max_len = std::max(max_len, cmd.name.size());
 
-    /// I CHOOSE DEATH!
-    for (const Command& cmd : registry.commands) {
-        std::string padding(max_len - cmd.name.size() + 2, ' ');
-        std::string indent = "   " + std::string(max_len + 5, ' '); // For subsequent lines
-
-        // Split description into lines
-        std::vector<std::string> lines;
-        std::stringstream ss(cmd.description);
+    for (const Command& cmd : Registry.commands) {
+        const std::string padding(max_len - cmd.name.size() + 2, ' ');
+        const std::string indent = "   " + std::string(max_len + 5, ' ');
+        std::istringstream description(cmd.description);
         std::string line;
-        while (std::getline(ss, line)) {
-            lines.push_back(line);
-        }
+        std::getline(description, line);
 
-        // Print first line with name and padding
         std::cout << "   " << cppkg::ux::color::yellow << cmd.name << cppkg::ux::color::reset
-                << padding << "- " << lines[0] << "\n";
+                  << padding << "- " << line << '\n';
 
-        // Print remaining lines with indentation
-        for (size_t i = 1; i < lines.size(); ++i) {
-            std::cout << indent << lines[i] << "\n";
-        }
+        while (std::getline(description, line))
+            std::cout << indent << line << '\n';
     }
 
-    std::cout << "\n";
+    std::cout << '\n';
     return nullptr;
-};
+}
 
-/// initialize this ahh
-void* init_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg init <name>");
-    cli_package.create_package(argv[2]);
+void* InitCommand(int argc, char* argv[]) {
+    CheckArguments(argc, 2, "Usage: cppkg init <name>");
+    CliPackage.create_package(argv[1]);
     return nullptr;
-};
+}
 
-/// oh look mom a git integration!
-void* git_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg git <command>");
-    std::string argument = argv[2];
-    std::string git_command_help = std::string("Git integration for cppkg. ") +
-        "\nUsage: cppkg git <command> \n" +
-        "NOTE: this is just a passthrough. no real functionality is in cppkg. \n" +
-        "meanwhile here is a list of available commands to use in cppkg git (NOT AN IMPLEMENTATION): \n" +
-        "   commit - save a change to github. \n" +
-        "          -m <message> - commit message. \n" +
-        "          -a - add all changes. \n" +
-        "          -v - verbose output. \n" +
-        "   push - push changes to github. for flags use git --help. \n" +
-        "   pull - pull changes from github. for flags use git --help. \n" +
-        "   status - show the status of the repository. for flags use git --help. \n" +
-        "   log - show the commit history. for flags use git --help. \n" +
-        "   branch - show the current branch. for flags use git --help. \n" +
-        "   checkout - switch to a different branch. for flags use git --help. \n" +
-        "   merge - merge changes from one branch to another. for flags use git --help. \n" +
-        "   add - add files to the staging area. for flags use git --help. \n" +
-        "   rm - remove files from the staging area. for flags use git --help. \n" +
-        "\n";
+void* GitCommand(int argc, char* argv[]) {
+    CheckArguments(argc, 2, "Usage: cppkg git <command>");
+    std::string argument = argv[1];
     if (argument == "help") {
-        std::cout << cppkg::ux::color::cyan << git_command_help;
-        std::cout << cppkg::ux::color::reset << "\n";
+        std::cout << cppkg::ux::color::cyan
+                  << "Git passthrough for cppkg.\n"
+                  << "Usage: cppkg git <git arguments>\n"
+                  << "Example: cppkg git status\n"
+                  << cppkg::ux::color::reset;
         return nullptr;
     }
-    cli_cmd.run("git " + argument);
+    CliCmd.run("git " + argument);
     return nullptr;
-};
+}
 
-/// add command lmao ima add this spike up your ass
-void* add_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg add <author/repo>@<version>");
-    bool https = false;
-    std::string spec = argv[2];
-    for (int i = 3; i < argc; ++i) {
-        if (std::string(argv[i]) == "--https") https = true;
-        if (std::string(argv[i]) == "--help")
+void* AddCommand(int argc, char* argv[]) {
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--help") {
             std::cout << cppkg::ux::color::cyan
                       << "Add a dependency to the workspace or to the package.\n"
-                      << " Usage: cppkg add <author/repo>@<version>"
-                      << cppkg::ux::color::reset << "\n";
+                      << "Usage: cppkg add <author/repo>@<version> [--https]"
+                      << cppkg::ux::color::reset << '\n';
+            return nullptr;
+        }
+    }
+
+    CheckArguments(argc, 2, "Usage: cppkg add <author/repo>@<version>");
+    bool https = false;
+    std::string spec = argv[1];
+    for (int i = 2; i < argc; ++i) {
+        if (std::string(argv[i]) == "--https") https = true;
     }
     cppkg::dependency_impl deps(https);
     deps.add(spec, fs::current_path().string());
     return nullptr;
-};
+}
 
-/// runs the project
-void* run_command(int argc, char* argv[]) {
-    std::string path = ".";
-    if (argc >= 3) path = argv[2];
-    else (void)argv;
-    cli_build.run_project(path);
+void* RunCommand(int argc, char* argv[]) {
+    CliBuild.run_project(argc >= 2 ? argv[1] : ".");
     return nullptr;
-};
+}
 
-/// search for a repo on github
-void* search_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg search <query>");
-    auto results = cli_git.search(argv[2]);
+void* SearchCommand(int argc, char* argv[]) {
+    CheckArguments(argc, 2, "Usage: cppkg search <query>");
+    auto results = CliGit.search(argv[1]);
     if (results.empty()) {
-        std::cout << cppkg::ux::color::red << "No results found for: " << argv[2] << cppkg::ux::color::reset << "\n";
+        std::cout << cppkg::ux::color::red << "No results found for: " << argv[1]
+                  << cppkg::ux::color::reset << '\n';
         return nullptr;
     }
     for (const auto& r : results) {
         std::cout << "   " << cppkg::ux::color::yellow << r.full_name << cppkg::ux::color::reset
                   << " - " << r.description
-                  << cppkg::ux::color::cyan << " Stars: " << r.stars << cppkg::ux::color::reset << "\n";
+                  << cppkg::ux::color::cyan << " Stars: " << r.stars << cppkg::ux::color::reset << '\n';
     }
     return nullptr;
-};
+}
 
-/// finally a publish command
-void* publish_command(int argc, char* argv[]) {
-    check_arguments(argc, 3, "Usage: cppkg publish <version> --message <msg>");
+void* PublishCommand(int argc, char* argv[]) {
+    CheckArguments(argc, 2, "Usage: cppkg publish <version> [--message <msg>] [--notes <path>]");
 
-    std::string version = argv[2];
+    std::string version = argv[1];
     std::string message = "Release v" + version;
 
-    for (int i = 3; i < argc; ++i) {
-        if (std::string(argv[i]) == "--message" && i + 1 < argc)
-            message = argv[i + 1];
-        if (std::string(argv[i]) == "--notes" && i + 1 < argc) {
-            std::ifstream f(argv[i + 1]);
-            if (f.is_open())
-                message = std::string((std::istreambuf_iterator<char>(f)),
-                                       std::istreambuf_iterator<char>());
+    for (int i = 2; i < argc; ++i) {
+        const std::string option = argv[i];
+        if (option != "--message" && option != "--notes")
+            throw std::runtime_error("Unknown publish option: " + option);
+        if (i + 1 >= argc)
+            throw std::runtime_error("Missing value for " + option);
+
+        const std::string value = argv[++i];
+        if (option == "--message") {
+            message = value;
+        } else {
+            std::ifstream notes(value);
+            if (!notes)
+                throw std::runtime_error("Unable to open release notes: " + value);
+            message.assign(std::istreambuf_iterator<char>(notes), std::istreambuf_iterator<char>());
         }
     }
 
     const char* token_env = std::getenv("CPPKG_TOKEN");
-    if (!token_env) {
-        std::cout << cppkg::ux::color::red
-                  << "No GitHub token found!\n"
-                  << "Set CPPKG_TOKEN environment variable:\n"
-                  << "  export CPPKG_TOKEN=your_token_here\n"
-                  << cppkg::ux::color::reset;
-        return nullptr;
-    }
+    if (!token_env)
+        throw std::runtime_error("No GitHub token found. Set the CPPKG_TOKEN environment variable.");
 
-    cli_git.publish(version, message, token_env);
-    return nullptr;
-};
-
-void* create_cmakelists(int argc, char* argv[]) {
-    check_arguments(argc, 2, "Not enough arguments passed! \n   Example: cppkg cmake <project_dir>");
-
-    fs::path project_dir = argv[2];
-    cli_build.create_lists(project_dir);
+    CliGit.publish(version, message, token_env);
     return nullptr;
 }
 
-void* create_alias(int argc, char* argv[]) {
-    check_arguments(argc, 4, "Not enough arguments passed! \n   Example: cppkg alias <name> <command>");
+void* CreateCmakeLists(int argc, char* argv[]) {
+    CheckArguments(argc, 2, "Usage: cppkg cmake <project_dir>");
 
-    auto& alias_manager = cppkg::alias::get();
-    alias_manager.add_alias(argv[2], argv[3]);
-
-    std::cout << cppkg::ux::color::green << "Alias created: " << argv[2]
-              << " -> " << argv[3] << cppkg::ux::color::reset << "\n";
+    fs::path project_dir = argv[1];
+    CliBuild.create_lists(project_dir);
     return nullptr;
 }
 
-std::string crash_desc = "crash the pc (JOKE. just crashes the executable.)\n";
-std::string clean_desc = "Clean build artifacts and dependencies\n";
-std::string search_desc = "Search for a dependency on github\n"
-                          " - e.g. cppkg search fmt\n";
-
-std::string add_desc = "Add a dependency (author/repo@version)\n"
-                       " - e.g. cppkg add fmtlib/fmt@10.1.0\n"
-                       " - --https  force HTTPS instead of SSH\n";
-
-std::string publish_desc = "Publish the package to github\n"
-                           " - --message <message>  commit message for the release\n"
-                           " - --notes <path>  use a markdown file for the release note\n";
-
-std::string cmake_desc = "cmake compatibility command.";
-std::string git_desc = "github integration inside of cppkg!";
-std::string version_desc = "Print the version of cppkg";
-std::string workspace_desc = "Manage workspaces";
-std::string new_desc = "Initialize a new package";
-std::string remove_desc = "Remove a dependency";
-std::string build_desc = "Build the package";
-std::string run_desc = "Run the package";
-std::string help_desc = "Display this help message";
-std::string alias_desc = "Manage command aliases\n"
-                         " - <name> name of the alias\n"
-                         " - <command> command to alias";
-
-/*
- * just adds base commands to the registry
- * if you didnt already understand it idk whats in your brain
- */
-void INITIALIZE(CommandRegistry& registry) {
-    //descending spiral. just how i like it.
-    registry.addCommand(Command("crash", crash_desc, crash_pc_command));
-    registry.addCommand(Command("clean", clean_desc, clean_command));
-    registry.addCommand(Command("search", search_desc, search_command));
-    registry.addCommand(Command("add", add_desc, add_command));
-    registry.addCommand(Command("publish", publish_desc, publish_command));
-    registry.addCommand(Command("cmake", cmake_desc, create_cmakelists));
-    registry.addCommand(Command("git", git_desc, git_command));
-    registry.addCommand(Command("version", version_desc, version_command));
-    registry.addCommand(Command("workspace", workspace_desc, workspace_command));
-    registry.addCommand(Command("new", new_desc, init_command));
-    registry.addCommand(Command("remove", remove_desc, remove_command));
-    registry.addCommand(Command("build", build_desc, build_command));
-    registry.addCommand(Command("run", run_desc, run_command));
-    registry.addCommand(Command("help", help_desc, help_command));
-    registry.addCommand(Command("alias", alias_desc, create_alias));
+void InitializeCommands() {
+    Registry.AddCommand(Command("clean", "Clean build artifacts and dependencies", CleanCommand));
+    Registry.AddCommand(Command("search", "Search for a dependency on GitHub\n - e.g. cppkg search fmt\n", SearchCommand));
+    Registry.AddCommand(Command("add", "Add a dependency (author/repo@version)\n - --https  force HTTPS instead of SSH\n", AddCommand));
+    Registry.AddCommand(Command("publish", "Publish a package to GitHub\n - --message <message>  commit message\n - --notes <path>  release notes file\n", PublishCommand));
+    Registry.AddCommand(Command("cmake", "Generate CMake compatibility files", CreateCmakeLists));
+    Registry.AddCommand(Command("git", "Pass a command through to Git", GitCommand));
+    Registry.AddCommand(Command("version", "Print the cppkg version", VersionCommand));
+    Registry.AddCommand(Command("workspace", "Manage workspaces", WorkspaceCommand));
+    Registry.AddCommand(Command("new", "Initialize a new package", InitCommand));
+    Registry.AddCommand(Command("remove", "Remove a dependency", RemoveCommand));
+    Registry.AddCommand(Command("build", "Build the package", BuildCommand));
+    Registry.AddCommand(Command("run", "Build and run the package", RunCommand));
+    Registry.AddCommand(Command("help", "Display this help message", HelpCommand));
 }
 
-int execute_command(int argc, char* argv[]) {
+int ExecuteCommand(int argc, char* argv[]) {
     std::string command_name = argv[1];
     std::vector<std::string> command_args;
     for (int i = 2; i < argc; ++i) command_args.push_back(argv[i]);
@@ -328,9 +235,8 @@ int execute_command(int argc, char* argv[]) {
 
     if (alias_manager.is_alias(command_name)) {
         std::string real_command = alias_manager.get_command(command_name);
-        std::cout << "Expanding alias: " << command_name << " -> " << real_command << std::endl;
+        std::cout << "Expanding alias: " << command_name << " -> " << real_command << '\n';
 
-        // Parse real_command
         std::vector<std::string> expanded;
         std::stringstream ss(real_command);
         std::string token;
@@ -345,27 +251,22 @@ int execute_command(int argc, char* argv[]) {
         }
     }
 
-    // Execute the command
-    registry.executeCommand(command_name, command_args);
+    Registry.ExecuteCommand(command_name, command_args);
     return 0;
 }
 
 int main(int argc, char* argv[]) {
-    INITIALIZE(registry);
+    InitializeCommands();
 
     if (argc < 2) {
-        help_command(argc, argv);
+        HelpCommand(argc, argv);
         return 0;
     }
 
     try {
-        return execute_command(argc, argv);
-    } catch (const std::runtime_error& e) {
-        handle_error(e);
+        return ExecuteCommand(argc, argv);
+    } catch (const std::exception& e) {
+        HandleError(e);
         return 1;
     }
-
-    return 0;
 }
-
-/// the real jackpot were the comments along the way -- yydev-official 2026.

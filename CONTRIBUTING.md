@@ -1,4 +1,4 @@
-**file might not be fully up-to-date, please contact [@twelve_seconds.left] for info or just asking questions.**
+**file might not be fully up-to-date, please contact [@twlve_secs] for info or just asking questions.**
 
 # Contributing to cppkg
 

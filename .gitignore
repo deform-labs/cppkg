@@ -2,3 +2,4 @@ builds/
 target/
 .cppkg/
 *.obj
+tests/

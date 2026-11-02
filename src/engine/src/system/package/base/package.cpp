@@ -1,6 +1,6 @@
-#include "../../file_system/toml/parser/toml_parser.h"
-#include "../../misc/file_system/create_file.h"
-#include "../../misc/ux/color.h"
+#include "system/filesystem/toml/parser/toml_parser.h"
+#include "misc/file_system/create_file.h"
+#include "misc/ux/color.h"
 #include <filesystem>
 #include "package.h"
 #include <iostream>
