@@ -1,40 +1,73 @@
 #include "compiler.h"
 #include "misc/ux/color.h"  // or wherever it lives
+#include <atomic>
 #include <iostream>
+#include <sstream>
+#include <thread>
 
 /// compile the source code of the package
 int cppkg::Compiler::CompileSourceDirectory(Compiler& wrapper, const Compiler::Config& config,
-                              const std::vector<std::string>& source_files, bool msvc,
+                              const std::vector<std::string>& source_files,
                               std::vector<std::string>& obj_files) {
-    int total_errors = 0;
-    int compiled = 0;
+    const size_t total = source_files.size();
+    if (total == 0) return 0;
 
-    for (const auto& source : source_files) {
-        if (config.verbose) {
-            std::cout << cppkg::ux::color::cyan << "[" << (compiled + 1) << "/" << source_files.size() << "]"
-                      << " Processing " << source << "..." << cppkg::ux::color::reset << std::endl;
+    // One worker per hardware thread unless the caller asked for a specific count.
+    const unsigned hardware = std::thread::hardware_concurrency();
+    size_t workers = config.jobs > 0 ? static_cast<size_t>(config.jobs)
+                                     : static_cast<size_t>(hardware ? hardware : 1);
+    if (workers > total) workers = total;
+
+    std::atomic<size_t> next{0};
+    std::atomic<int> errors{0};
+
+    std::vector<std::string> objects(total);
+    std::vector<char> built(total, 0);
+
+    auto worker = [&]() {
+        for (;;) {
+            const size_t index = next.fetch_add(1);
+            if (index >= total) return;
+            const std::string& source = source_files[index];
+
+            if (config.verbose) {
+                std::ostringstream line;
+                line << cppkg::ux::color::cyan << "[" << (index + 1) << "/" << total << "]"
+                     << " Processing " << source << "..." << cppkg::ux::color::reset;
+                LogLine(line.str());
+            }
+
+            const std::string object = wrapper.ObjectFileFor(source);
+            std::error_code ec;
+            std::filesystem::create_directories(std::filesystem::path(object).parent_path(), ec);
+
+            const int result = wrapper.Compile(source, object);
+
+            if (result != 0) {
+                errors.fetch_add(1);
+                if (config.verbose) {
+                    std::ostringstream line;
+                    line << cppkg::ux::color::red << "Failed to compile -> " << source
+                         << cppkg::ux::color::reset;
+                    LogLine(line.str());
+                }
+            } else {
+                objects[index] = object;
+                built[index] = 1;
+            }
         }
+    };
 
-        std::string filename = source;
-        auto slash = filename.find_last_of("/\\");
-        if (slash != std::string::npos) filename = filename.substr(slash + 1);
-        auto dot = filename.find_last_of('.');
-        if (dot != std::string::npos) filename = filename.substr(0, dot);
-        std::filesystem::create_directories(config.build_dir + "/objs");
+    std::vector<std::thread> pool;
+    pool.reserve(workers);
+    for (size_t i = 0; i < workers; ++i) pool.emplace_back(worker);
+    for (auto& thread : pool) thread.join();
 
-        std::string obj = config.build_dir + "/objs/" + filename + (msvc ? ".obj" : ".o");
-        int result = wrapper.Compile(source, obj);
+    // Build the object list in source order so the link command stays deterministic.
+    for (size_t i = 0; i < total; ++i)
+        if (built[i]) obj_files.push_back(objects[i]);
 
-        if (result != 0) {
-            total_errors++;
-            if (config.verbose)
-                std::cerr << cppkg::ux::color::red << "Failed to compile -> " << source << cppkg::ux::color::reset << std::endl;
-        } else {
-            obj_files.push_back(obj);
-        }
-        compiled++;
-    }
-    return total_errors;
+    return errors.load();
 }
 
 /// wrap a string in quotes :)

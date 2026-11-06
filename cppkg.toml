@@ -5,6 +5,6 @@ cpp_std = "c++23"
 
 [compiler]
 IncludePaths = ["src"]
-Compiler_Flags = []
+compiler_flags = []
 
 [dependencies]

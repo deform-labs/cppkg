@@ -10,7 +10,9 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <algorithm>
 #include <chrono>
+#include <cstdlib>
 
 using namespace cppkg;
 using namespace cppkg::ux;
@@ -63,11 +65,29 @@ static std::vector<std::string> get_source_files(const fs::path& project_dir) {
     return source_files;
 }
 
+/// Keys a table understands. Anything else is reported rather than silently ignored, which
+/// is how "Compiler_Flags = [...]" used to do nothing at all.
+static void warn_unknown_keys(const Toml& toml, const std::string& section,
+                              const std::vector<std::string>& known) {
+    if (!toml.has_section(section)) return;
+    for (const auto& key : toml.keys(section)) {
+        if (std::find(known.begin(), known.end(), key) != known.end()) continue;
+        std::cerr << color::yellow << "[WARN] " << color::reset
+                  << "cppkg.toml: unknown key \"" << key << "\" in [" << section
+                  << "], ignored\n";
+    }
+}
+
 static Compiler::Config get_compiler_config(const fs::path& project_dir) {
     auto toml = build_toml_.parse_toml((project_dir / "cppkg.toml").string());
+    warn_unknown_keys(toml, "package",
+        {"name", "version", "description", "authors", "license", "cpp_std", "compiler"});
+    warn_unknown_keys(toml, "compiler",
+        {"IncludePaths", "LibraryPaths", "Libraries", "compiler_flags"});
+
     std::string name    = toml.get("package", "name");
     // Passed through as written; Compiler::StdVersion normalises "c++20"/"20"/"latest".
-    std::string cpp_std = toml.get("package", "cpp_std");
+    std::string cpp_std = toml.get_or("package", "cpp_std", "c++20");
 
     Compiler::Config config;
 
@@ -82,25 +102,19 @@ static Compiler::Config get_compiler_config(const fs::path& project_dir) {
 #endif
     }
 
-    // Include paths
-    if (toml.has("compiler", "IncludePaths")) {
-        auto paths = toml.parse_array(toml.get("compiler", "IncludePaths"));
-        for (const auto& p : paths)
-            config.include_paths.push_back(p);
-    }
+    // Include paths. array() hands back parsed elements, so a quoted entry may contain a
+    // comma or a '#' without confusing the reader.
+    for (const auto& p : toml.array("compiler", "IncludePaths"))
+        config.include_paths.push_back(p);
 
     // Library search paths and library names, e.g.
     //   [compiler]
     //   LibraryPaths = ["vendor/lib"]
     //   Libraries = ["fmt"]
-    if (toml.has("compiler", "LibraryPaths")) {
-        for (const auto& p : toml.parse_array(toml.get("compiler", "LibraryPaths")))
-            config.library_paths.push_back(p);
-    }
-    if (toml.has("compiler", "Libraries")) {
-        for (const auto& lib : toml.parse_array(toml.get("compiler", "Libraries")))
-            config.libraries.push_back(lib);
-    }
+    for (const auto& p : toml.array("compiler", "LibraryPaths"))
+        config.library_paths.push_back(p);
+    for (const auto& lib : toml.array("compiler", "Libraries"))
+        config.libraries.push_back(lib);
 
     // Fetched dependencies live in target/deps/<repo>. Put the header roots they actually
     // ship on the include path so `cppkg add fmtlib/fmt@...` makes `#include <fmt/core.h>`
@@ -119,12 +133,18 @@ static Compiler::Config get_compiler_config(const fs::path& project_dir) {
         }
     }
 
-    // Compiler flags — fixed: key name was inconsistent ("compiler_flags" vs "Compiler_Flags")
-    if (toml.has("compiler", "compiler_flags")) {
-        auto flags = toml.parse_array(toml.get("compiler", "compiler_flags"));
-        for (const auto& flag : flags)
-            config.default_flags.push_back(flag);
-    }
+    // Extra compiler flags, appended to the defaults.
+    for (const auto& flag : toml.array("compiler", "compiler_flags"))
+        config.default_flags.push_back(flag);
+
+    // Objects mirror their path below src/, so two sources that share a file name no longer
+    // compile onto one another's object.
+    config.source_root   = (project_dir / "src").string();
+    config.project_dir   = project_dir.string();
+
+    // CPPKG_JOBS=1 forces a serial build; unset or 0 uses one thread per hardware thread.
+    if (const char* jobs = std::getenv("CPPKG_JOBS"))
+        config.jobs = std::atoi(jobs);
 
     config.output_name   = name;
     config.cpp_std       = cpp_std;
@@ -146,7 +166,7 @@ void build::create_lists(fs::path project_dir) {
 
     auto toml = build_toml_.parse_toml((project_dir / "cppkg.toml").string());
     std::string name    = toml.get("package", "name");
-    std::string cpp_std = toml.get("package", "cpp_std");
+    std::string cpp_std = toml.get_or("package", "cpp_std", "c++20");
 
     // Collect source files explicitly to avoid GLOB_RECURSE stale-cache issues
     std::vector<std::string> sources;
@@ -196,7 +216,8 @@ void build::create_lists(fs::path project_dir) {
 // ---------------------------------------------------------------------------
 
 void build::build_project(const std::string& path) {
-    fs::path project_dir = fs::absolute(path);
+    // Canonical, so "build ." does not leak "/./" into object paths or compile_commands.json.
+    fs::path project_dir = fs::weakly_canonical(path);
 
     get_deps(project_dir);
 
@@ -204,6 +225,13 @@ void build::build_project(const std::string& path) {
 
     Compiler::Config config = get_compiler_config(project_dir);
     Compiler compiler_(config);
+
+    // Record the exact flags for clangd and other tooling. Written on every build, including
+    // ones where every object is already up to date, so the database never goes stale.
+    if (!compiler_.WriteCompileCommands(source_files, (project_dir / "compile_commands.json").string())) {
+        std::cerr << color::yellow << "[WARN] " << color::reset
+                  << "could not write compile_commands.json\n";
+    }
 
     int result = compiler_.CompileAll(source_files);
     if (result != 0) {
@@ -218,7 +246,7 @@ void build::build_project(const std::string& path) {
 // ---------------------------------------------------------------------------
 
 void build::run_project(const std::string& path) {
-    fs::path project_dir = fs::absolute(path);
+    fs::path project_dir = fs::weakly_canonical(path);
 
     Compiler::Config config = get_compiler_config(project_dir);
 

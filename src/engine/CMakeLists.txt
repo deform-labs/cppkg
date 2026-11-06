@@ -14,6 +14,10 @@ file(GLOB_RECURSE ENGINE_SOURCES
 
 add_library(cppkg_engine STATIC ${ENGINE_SOURCES})
 
+# std::thread compiles the project's translation units in parallel
+find_package(Threads REQUIRED)
+target_link_libraries(cppkg_engine PUBLIC Threads::Threads)
+
 target_include_directories(cppkg_engine
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
