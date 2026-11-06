@@ -65,11 +65,9 @@ static std::vector<std::string> get_source_files(const fs::path& project_dir) {
 static compiler::config get_compiler_config(const fs::path& project_dir) {
     auto toml = build_toml_.parse_toml((project_dir / "cppkg.toml").string());
     std::string name    = toml.get("package", "name");
+    // Passed through as written; the compiler wrapper normalises "c++20"/"20"/"latest"
+    // into the flag each compiler family expects.
     std::string cpp_std = toml.get("package", "cpp_std");
-
-    // Strip leading "c++" prefix if present ("c++17" -> "17")
-    if (cpp_std.size() > 3 && cpp_std.substr(0, 3) == "c++")
-        cpp_std = cpp_std.substr(3);
 
     compiler::config config;
 
@@ -89,6 +87,36 @@ static compiler::config get_compiler_config(const fs::path& project_dir) {
         auto paths = toml.parse_array(toml.get("compiler", "IncludePaths"));
         for (const auto& p : paths)
             config.include_paths.push_back(p);
+    }
+
+    // Library search paths and library names, e.g.
+    //   [compiler]
+    //   LibraryPaths = ["vendor/lib"]
+    //   Libraries = ["fmt"]
+    if (toml.has("compiler", "LibraryPaths")) {
+        for (const auto& p : toml.parse_array(toml.get("compiler", "LibraryPaths")))
+            config.library_paths.push_back(p);
+    }
+    if (toml.has("compiler", "Libraries")) {
+        for (const auto& lib : toml.parse_array(toml.get("compiler", "Libraries")))
+            config.libraries.push_back(lib);
+    }
+
+    // Fetched dependencies live in target/deps/<repo>. Put the header roots they actually
+    // ship on the include path so `cppkg add fmtlib/fmt@...` makes `#include <fmt/core.h>`
+    // resolve, and the usual lib/ and build/ dirs on the link path so a dependency that
+    // was compiled in place can be linked with Libraries = [...].
+    dependency_impl deps;
+    for (const auto& dep : deps.load_dependencies(project_dir.string())) {
+        fs::path dep_root = project_dir / "target" / "deps" / dep.repo;
+        for (const auto& dir : { dep_root, dep_root / "include", dep_root / "src" }) {
+            if (fs::is_directory(dir))
+                config.include_paths.push_back(dir.string());
+        }
+        for (const auto& dir : { dep_root / "lib", dep_root / "build" }) {
+            if (fs::is_directory(dir))
+                config.library_paths.push_back(dir.string());
+        }
     }
 
     // Compiler flags — fixed: key name was inconsistent ("compiler_flags" vs "Compiler_Flags")
@@ -139,7 +167,8 @@ void build::create_lists(fs::path project_dir) {
     std::string cmake;
     cmake += "cmake_minimum_required(VERSION 3.10)\n";
     cmake += "project(" + name + ")\n\n";
-    cmake += "set(CMAKE_CXX_STANDARD " + cpp_std + ")\n";
+    // CMAKE_CXX_STANDARD takes a bare version ("20"), never the manifest's "c++20".
+    cmake += "set(CMAKE_CXX_STANDARD " + compiler::std_version(cpp_std) + ")\n";
     cmake += "set(CMAKE_CXX_STANDARD_REQUIRED True)\n\n";
 
     // Explicit source list instead of GLOB_RECURSE

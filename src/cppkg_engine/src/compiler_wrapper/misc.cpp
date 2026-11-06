@@ -73,6 +73,8 @@ std::string cppkg::compiler::translate_flag(const std::string& flag, bool msvc) 
 std::string cppkg::compiler::handle_msvc_linker(const cppkg::compiler::config& config, const std::vector<std::string>& obj_files) {
     std::string out = config.build_dir + "/" + (config.output_name.empty() ? "program" : config.output_name) + ".exe";
     std::string link_cmd = "link /nologo /OUT:" + quote(out);
+    for (const auto& path : config.library_paths)
+        link_cmd += " /LIBPATH:" + quote(path);
     for (const auto& lib : config.libraries)
         link_cmd += " " + lib + ".lib";
     for (const auto& obj : obj_files)

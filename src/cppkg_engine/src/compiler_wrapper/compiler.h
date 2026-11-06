@@ -27,6 +27,10 @@
                 // Constructors
                 compiler();  // default constructor
 
+                /// Reduces "c++20", "20", "C++20", "latest" or "" to a bare version: "20".
+                /// Both -std=c++NN and CMAKE_CXX_STANDARD need the number without the prefix.
+                static std::string std_version(const std::string& cpp_std);
+
                 int compile(const std::string& source_file, const std::string& output_file = "");
                 int compile_all(const std::vector<std::string>& source_files);
 

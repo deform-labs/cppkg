@@ -19,17 +19,26 @@ compiler::compiler(const config& cfg) : config_(cfg) {
     build_base_command();
 }
 
+std::string compiler::std_version(const std::string& cpp_std) {
+    std::string ver = cpp_std;
+    if (ver.size() > 3 && (ver.compare(0, 3, "c++") == 0 || ver.compare(0, 3, "C++") == 0))
+        ver = ver.substr(3);
+    if (ver == "latest") ver = "23";  // no portable spelling; pin to the newest we know
+    if (ver.empty()) ver = "20";
+    return ver;
+}
+
 void compiler::build_base_command() {
     bool msvc = is_msvc(config_.compiler_path);
     build_command_.clear();
     build_command_.push_back(config_.compiler_path);
 
+    // cppkg.toml may spell the standard "c++20", "20" or "latest" — reduce it to the bare
+    // version once here, then let each compiler family build its own flag from that.
+    std::string ver = std_version(config_.cpp_std);
+
     if (msvc) {
         // MSVC /std: flag mapping
-        // Input may be "17", "20", "23", "c++17", "c++20", "c++23", "c++latest"
-        std::string raw = config_.cpp_std;
-        // Strip leading "c++" if present
-        std::string ver = (raw.size() > 3 && raw.substr(0, 3) == "c++") ? raw.substr(3) : raw;
         std::string msvc_std;
         if (ver == "14") msvc_std = "/std:c++14";
         else if (ver == "17") msvc_std = "/std:c++17";
@@ -40,7 +49,8 @@ void compiler::build_base_command() {
         build_command_.push_back("/EHsc");
         build_command_.push_back("/nologo");
     } else {
-        build_command_.push_back("-std=" + config_.cpp_std);
+        // GCC and Clang want the full spelling: -std=c++20, never -std=20.
+        build_command_.push_back("-std=c++" + ver);
     }
 
     std::vector<std::string> seen;

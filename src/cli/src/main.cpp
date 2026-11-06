@@ -252,7 +252,7 @@ void* publish_command(int argc, char* argv[]) {
 };
 
 void* create_cmakelists(int argc, char* argv[]) {
-    check_arguments(argc, 2, "Not enough arguments passed! \n   Example: cppkg cmake <project_dir>");
+    check_arguments(argc, 3, "Not enough arguments passed! \n   Example: cppkg cmake <project_dir>");
 
     fs::path project_dir = argv[2];
     cli_build.create_lists(project_dir);
@@ -338,10 +338,13 @@ int execute_command(int argc, char* argv[]) {
 
         if (!expanded.empty()) {
             command_name = expanded[0];
-            command_args.clear();
+            std::vector<std::string> expanded_args;
             for (size_t i = 1; i < expanded.size(); ++i) {
-                command_args.push_back(expanded[i]);
+                expanded_args.push_back(expanded[i]);
             }
+            // keep whatever the user typed after the alias name
+            expanded_args.insert(expanded_args.end(), command_args.begin(), command_args.end());
+            command_args = std::move(expanded_args);
         }
     }
 
