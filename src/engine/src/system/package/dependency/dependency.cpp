@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include <fstream>
+#include <cctype>
 
 using namespace cppkg;
 
@@ -135,6 +136,10 @@ void dependency_impl::remove(const std::string& name, const std::string& project
     std::ofstream out(toml_path);
     out << content;
 
+    // drop the pin as well, otherwise the lock keeps claiming a dependency that is gone
+    LockFile lock(project_root + "/cppkg.lock");
+    lock.remove_entry(pkg_name);
+
     std::cout << ux::color::green << "Removed dependency: " << pkg_name << ux::color::reset << "\n";
 }
 
@@ -172,6 +177,14 @@ std::vector<dependency> dependency_impl::load_dependencies(const std::string& pr
     return deps;
 }
 
+/// a lockfile pin has to be a plain commit hash before we let it near a shell
+static bool is_commit_hash(const std::string& hash) {
+    if (hash.size() < 7 || hash.size() > 40) return false;
+    for (char c : hash)
+        if (!std::isxdigit(static_cast<unsigned char>(c))) return false;
+    return true;
+}
+
 /// shall we fetch all your dependencies sir?
 bool dependency_impl::fetch_all(const std::string& project_root) {
     auto deps = load_dependencies(project_root);
@@ -180,25 +193,74 @@ bool dependency_impl::fetch_all(const std::string& project_root) {
     bool all_ok = true;
     fs::current_path(project_root);
 
-    LockFile lock(project_root + "/cppkg.lock");  // add this
+    LockFile lock(project_root + "/cppkg.lock");
+    const LockMap entries = lock.read();
 
     for (const auto& dep : deps) {
         std::string dest = github::dep_path(dep.repo, "target/deps");
 
-        if (fs::exists(dest)) {
-            std::cout << ux::color::cyan << "Already fetched: " << dep.name << ux::color::reset << "\n";
+        // While cppkg.toml keeps asking for the same version the locked commit wins;
+        // bumping the version is how you ask cppkg to move to a newer revision.
+        std::string pinned;
+        auto entry = entries.find(dep.name);
+        if (entry != entries.end()) {
+            if (entry->second.version != dep.version) {
+                std::cout << ux::color::cyan << "Version changed for " << dep.name << " ("
+                          << entry->second.version << " -> " << dep.version
+                          << "), re-resolving" << ux::color::reset << "\n";
+            } else if (is_commit_hash(entry->second.hash)) {
+                pinned = entry->second.hash;
+            }
+        }
+
+        if (!fs::exists(dest)) {
+            if (!git_.clone(dep.author, dep.repo, dep.version)) {
+                std::cout << ux::color::red << "Failed to fetch: " << dep.name << ux::color::reset << "\n";
+                all_ok = false;
+                continue;
+            }
+        } else if (pinned.empty()) {
+            // nothing to pin to, so make the working tree match what the manifest asks for
+            if (!git_.update_to_ref(dest, dep.version)) {
+                std::cout << ux::color::red << "Failed to update " << dep.name << " to "
+                          << dep.version << ux::color::reset << "\n";
+                all_ok = false;
+                continue;
+            }
+        }
+
+        if (!pinned.empty()) {
+            std::string head = git_.get_commit_hash(dest);
+            if (head.rfind(pinned, 0) != 0) {
+                std::cout << ux::color::cyan << "Pinning " << dep.name << " to locked commit "
+                          << pinned << "..." << ux::color::reset << "\n";
+                head = git_.checkout_commit(dest, pinned) ? git_.get_commit_hash(dest) : "";
+            }
+            if (head.empty() || head.rfind(pinned, 0) != 0) {
+                std::cout << ux::color::red << "Locked commit " << pinned << " for " << dep.name
+                          << " is not available in the clone\n"
+                          << "  Delete cppkg.lock and run `cppkg clean` to resolve a new revision\n"
+                          << ux::color::reset;
+                all_ok = false;
+                continue;
+            }
+            // migrate a short hash from an older lockfile to the full one
+            if (pinned.size() < 40)
+                lock.upsert(dep.name, dep.version, head);
+            std::cout << ux::color::cyan << "Locked: " << dep.name << " # " << head
+                      << ux::color::reset << "\n";
             continue;
         }
 
-        if (!git_.clone(dep.author, dep.repo, dep.version)) {
-            std::cout << ux::color::red << "Failed to fetch: " << dep.name << ux::color::reset << "\n";
+        std::string hash = git_.get_commit_hash(dest);
+        if (!is_commit_hash(hash)) {
+            std::cout << ux::color::red << "Could not read a commit hash for " << dep.name
+                      << ux::color::reset << "\n";
             all_ok = false;
-        } else {
-            // write to lockfile after successful clone
-            std::string hash = git_.get_commit_hash(dest);
-            lock.upsert(dep.name, dep.version, hash);
-            std::cout << ux::color::cyan << "Locked: " << dep.name << " # " << hash << ux::color::reset << "\n";
+            continue;
         }
+        lock.upsert(dep.name, dep.version, hash);
+        std::cout << ux::color::cyan << "Locked: " << dep.name << " # " << hash << ux::color::reset << "\n";
     }
 
     return all_ok;

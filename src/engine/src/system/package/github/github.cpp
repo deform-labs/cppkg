@@ -29,12 +29,31 @@ std::string github::dep_path(const std::string& repo, const std::string& base) {
 
 // get that assh
 std::string github::get_commit_hash(const std::string& repo_path) {
-    std::string cmd = "git -C \"" + repo_path + "\" rev-parse --short HEAD";
+    std::string cmd = "git -C \"" + repo_path + "\" rev-parse HEAD";
     std::string out = shell_.RunWithOutput(cmd);
     // trim that assh
     while (!out.empty() && (out.back() == '\n' || out.back() == '\r' || out.back() == ' '))
         out.pop_back();
     return out;
+}
+
+/// pin an existing clone to an exact commit, fetching it if this clone has never seen it
+bool github::checkout_commit(const std::string& repo_path, const std::string& commit) {
+    std::string has_commit = "git -C \"" + repo_path + "\" cat-file -e " + commit + "^{commit}";
+    if (shell_.RunQuiet(has_commit) != 0) {
+        std::string fetch = "git -C \"" + repo_path + "\" fetch --depth 1 origin " + commit;
+        if (shell_.RunQuiet(fetch) != 0) return false;
+    }
+    std::string checkout = "git -C \"" + repo_path + "\" checkout -q " + commit;
+    return shell_.RunQuiet(checkout) == 0;
+}
+
+/// move an existing clone to the branch or tag the manifest asks for
+bool github::update_to_ref(const std::string& repo_path, const std::string& ref) {
+    std::string fetch = "git -C \"" + repo_path + "\" fetch --depth 1 origin " + ref;
+    if (shell_.RunQuiet(fetch) != 0) return false;
+    std::string checkout = "git -C \"" + repo_path + "\" checkout -q FETCH_HEAD";
+    return shell_.RunQuiet(checkout) == 0;
 }
 
 /// clone that ass

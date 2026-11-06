@@ -45,7 +45,8 @@ static void get_deps(const fs::path& project_dir) {
     dependency_impl deps;
     std::cout << color::cyan << "Fetching dependencies..." << color::reset << "\n";
     if (!deps.fetch_all(project_dir.string())) {
-        std::cout << color::red << "Some dependencies failed to fetch" << color::reset << "\n";
+        throw std::runtime_error(
+            "Dependency resolution failed; refusing to build against an unpinned revision");
     }
 }
 

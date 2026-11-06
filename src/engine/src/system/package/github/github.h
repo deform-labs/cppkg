@@ -26,8 +26,14 @@
                 /// Returns the path to the cloned repository
                 static std::string dep_path(const std::string& repo, const std::string& base = "target");
 
-                /// Returns the commit hash of the given repository
+                /// Returns the full commit hash of the given repository
                 std::string get_commit_hash(const std::string& repo_path);
+
+                /// Checks out an exact commit, fetching it from origin when this clone has never seen it
+                bool checkout_commit(const std::string& repo_path, const std::string& commit);
+
+                /// Fetches a branch or tag into an existing clone and checks it out
+                bool update_to_ref(const std::string& repo_path, const std::string& ref);
 
                 /// Commits the changes with the given message
                 bool commit(const std::string& message);

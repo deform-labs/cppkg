@@ -2,7 +2,7 @@
 #include <sstream>
 
 using namespace cppkg;
-// format: fmtlib/fmt = "10.1.0" # a1b2c3d
+// format: fmtlib/fmt = "10.1.0" # <full commit sha>
 // there you happy? you have the only line of documentation of this whole project here.
 static std::string serialize(const LockMap& entries) {
     std::string out;
