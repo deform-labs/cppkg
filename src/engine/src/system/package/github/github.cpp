@@ -6,7 +6,7 @@
 #include <vector>
 
 /// aliases here aliases there, are we ever going to stop using aliases?
-cppkg::command_system shell_;
+cppkg::CommandSystem shell_;
 namespace fs = std::filesystem;
 using namespace cppkg;
 
@@ -30,7 +30,7 @@ std::string github::dep_path(const std::string& repo, const std::string& base) {
 // get that assh
 std::string github::get_commit_hash(const std::string& repo_path) {
     std::string cmd = "git -C \"" + repo_path + "\" rev-parse --short HEAD";
-    std::string out = shell_.run_with_output(cmd);
+    std::string out = shell_.RunWithOutput(cmd);
     // trim that assh
     while (!out.empty() && (out.back() == '\n' || out.back() == '\r' || out.back() == ' '))
         out.pop_back();
@@ -57,7 +57,7 @@ bool github::clone(const std::string& author, const std::string& repo, const std
     }
     cmd += " " + url + " " + dest;
 
-    int rc = shell_.run_quiet(cmd);
+    int rc = shell_.RunQuiet(cmd);
 
     if (rc != 0 && !https_mode_) {
         std::cout << "SSH failed, trying HTTPS...\n";
@@ -72,7 +72,7 @@ bool github::clone(const std::string& author, const std::string& repo, const std
         }
         cmd += " " + url + " " + dest;
 
-        rc = shell_.run_quiet(cmd);
+        rc = shell_.RunQuiet(cmd);
     }
 
     if (rc != 0) {
@@ -90,13 +90,13 @@ bool github::validate_repo(const std::string& author, const std::string& repo) {
     // if user prefereth ith cppkgth shall useth ith
     std::string url = build_url(author, repo, false);
     std::string cmd = "git ls-remote " + url + " HEAD";
-    int rc = shell_.run_quiet(cmd);
+    int rc = shell_.RunQuiet(cmd);
 
     // if dumb ass ssh fails lowk switch to https
     if (rc != 0 && !https_mode_) {
         url = build_url(author, repo, true);
         cmd = "git ls-remote " + url + " HEAD";
-        rc = shell_.run_quiet(cmd);
+        rc = shell_.RunQuiet(cmd);
     }
 
     return rc == 0;
@@ -105,22 +105,22 @@ bool github::validate_repo(const std::string& author, const std::string& repo) {
 /// for beginners this saves the changes to github
 /// genuinely tho if you used git before you should know this
 bool github::commit(const std::string& message) {
-    if (!shell_.command_exists("git")) {
+    if (!shell_.DoesCommandExist("git")) {
         std::cout << ux::color::green << "Git not found. Please install Git: https://git-scm.com/" << ux::color::reset << std::endl;
         return false;
     }
     std::string cmd = "git commit -m \"" + message + "\"";
-    int rc = shell_.run(cmd);
+    int rc = shell_.Run(cmd);
     return rc == 0;
 }
 
 /// cmon girl! Push!
 bool github::push() {
-    if (!shell_.command_exists("git")) {
+    if (!shell_.DoesCommandExist("git")) {
         return false;
     }
     std::string cmd = "git push";
-    int rc = shell_.run(cmd);
+    int rc = shell_.Run(cmd);
     return rc == 0;
 }
 
@@ -162,7 +162,7 @@ std::vector<search_result> github::search(const std::string& query) {
     std::string cmd = "curl -s \"https://api.github.com/search/repositories"
                   "?q=" + query + "+language:cpp&sort=stars&per_page=5\"";
 
-    std::string output = shell_.run_with_output(cmd);
+    std::string output = shell_.RunWithOutput(cmd);
     if (output.empty()) return {};
 
     std::vector<search_result> results;
@@ -199,7 +199,7 @@ std::vector<search_result> github::search(const std::string& query) {
 /// forked this too lol
 /// gets the owner from git remote
 std::string github::get_remote_owner() {
-    std::string output = shell_.run_with_output("git remote get-url origin");
+    std::string output = shell_.RunWithOutput("git remote get-url origin");
     // parses both https://github.com/owner/repo and git@github.com:owner/repo
     size_t pos = output.find("github.com");
     if (pos == std::string::npos) return "";
@@ -214,13 +214,13 @@ std::string github::get_remote_owner() {
 bool github::publish(const std::string& version, const std::string& message, const std::string& token) {
     // step 1: git add and commit
     std::cout << ux::color::cyan << "Committing changes..." << ux::color::reset << "\n";
-    shell_.run("git add .");
+    shell_.Run("git add .");
     std::string commit_cmd = "git commit -m \"" + message + "\"";
-    shell_.run(commit_cmd);
+    shell_.Run(commit_cmd);
 
     // step 2: push
     std::cout << ux::color::cyan << "Pushing to remote..." << ux::color::reset << "\n";
-    int rc = shell_.run("git push");
+    int rc = shell_.Run("git push");
     if (rc != 0) {
         std::cout << ux::color::red << "Push failed!" << ux::color::reset << "\n";
         return false;
@@ -228,8 +228,8 @@ bool github::publish(const std::string& version, const std::string& message, con
 
     // step 3: create and push tag
     std::cout << ux::color::cyan << "Creating tag v" << version << "..." << ux::color::reset << "\n";
-    shell_.run("git tag v" + version);
-    rc = shell_.run("git push origin v" + version);
+    shell_.Run("git tag v" + version);
+    rc = shell_.Run("git push origin v" + version);
     if (rc != 0) {
         std::cout << ux::color::red << "Tag push failed!" << ux::color::reset << "\n";
         return false;
@@ -237,7 +237,7 @@ bool github::publish(const std::string& version, const std::string& message, con
 
     // step 4: get owner and repo from remote
     std::string owner = get_remote_owner();
-    std::string remote = shell_.run_with_output("git remote get-url origin");
+    std::string remote = shell_.RunWithOutput("git remote get-url origin");
     // parse repo name
     size_t slash = remote.rfind('/');
     size_t dot   = remote.rfind('.');
@@ -276,7 +276,7 @@ bool github::publish(const std::string& version, const std::string& message, con
         "--config " + tmp_config + " "
         "--data @" + tmp_body;
 
-    std::string response = shell_.run_with_output(curl_cmd);
+    std::string response = shell_.RunWithOutput(curl_cmd);
 
     std::remove(tmp_body.c_str());
     std::remove(tmp_config.c_str());

@@ -18,7 +18,7 @@ using namespace cppkg::ux;
 namespace fs = std::filesystem;
 
 // File-scope singletons — one instance each, no shadowing
-static command_system build_shell_;
+static CommandSystem build_shell_;
 static toml_parser    build_toml_;
 
 // ---------------------------------------------------------------------------
@@ -62,16 +62,13 @@ static std::vector<std::string> get_source_files(const fs::path& project_dir) {
     return source_files;
 }
 
-static compiler::config get_compiler_config(const fs::path& project_dir) {
+static Compiler::Config get_compiler_config(const fs::path& project_dir) {
     auto toml = build_toml_.parse_toml((project_dir / "cppkg.toml").string());
     std::string name    = toml.get("package", "name");
+    // Passed through as written; Compiler::StdVersion normalises "c++20"/"20"/"latest".
     std::string cpp_std = toml.get("package", "cpp_std");
 
-    // Strip leading "c++" prefix if present ("c++17" -> "17")
-    if (cpp_std.size() > 3 && cpp_std.substr(0, 3) == "c++")
-        cpp_std = cpp_std.substr(3);
-
-    compiler::config config;
+    Compiler::Config config;
 
     // Compiler executable
     if (toml.has("package", "compiler")) {
@@ -89,6 +86,36 @@ static compiler::config get_compiler_config(const fs::path& project_dir) {
         auto paths = toml.parse_array(toml.get("compiler", "IncludePaths"));
         for (const auto& p : paths)
             config.include_paths.push_back(p);
+    }
+
+    // Library search paths and library names, e.g.
+    //   [compiler]
+    //   LibraryPaths = ["vendor/lib"]
+    //   Libraries = ["fmt"]
+    if (toml.has("compiler", "LibraryPaths")) {
+        for (const auto& p : toml.parse_array(toml.get("compiler", "LibraryPaths")))
+            config.library_paths.push_back(p);
+    }
+    if (toml.has("compiler", "Libraries")) {
+        for (const auto& lib : toml.parse_array(toml.get("compiler", "Libraries")))
+            config.libraries.push_back(lib);
+    }
+
+    // Fetched dependencies live in target/deps/<repo>. Put the header roots they actually
+    // ship on the include path so `cppkg add fmtlib/fmt@...` makes `#include <fmt/core.h>`
+    // resolve, and the usual lib/ and build/ dirs on the link path so a dependency that
+    // was compiled in place can be linked with Libraries = [...].
+    dependency_impl deps;
+    for (const auto& dep : deps.load_dependencies(project_dir.string())) {
+        fs::path dep_root = project_dir / "target" / "deps" / dep.repo;
+        for (const auto& dir : { dep_root, dep_root / "include", dep_root / "src" }) {
+            if (fs::is_directory(dir))
+                config.include_paths.push_back(dir.string());
+        }
+        for (const auto& dir : { dep_root / "lib", dep_root / "build" }) {
+            if (fs::is_directory(dir))
+                config.library_paths.push_back(dir.string());
+        }
     }
 
     // Compiler flags — fixed: key name was inconsistent ("compiler_flags" vs "Compiler_Flags")
@@ -139,7 +166,8 @@ void build::create_lists(fs::path project_dir) {
     std::string cmake;
     cmake += "cmake_minimum_required(VERSION 3.10)\n";
     cmake += "project(" + name + ")\n\n";
-    cmake += "set(CMAKE_CXX_STANDARD " + cpp_std + ")\n";
+    // CMAKE_CXX_STANDARD takes a bare version ("20"), never the manifest's "c++20".
+    cmake += "set(CMAKE_CXX_STANDARD " + Compiler::StdVersion(cpp_std) + ")\n";
     cmake += "set(CMAKE_CXX_STANDARD_REQUIRED True)\n\n";
 
     // Explicit source list instead of GLOB_RECURSE
@@ -173,10 +201,10 @@ void build::build_project(const std::string& path) {
 
     std::vector<std::string> source_files = get_source_files(project_dir);
 
-    compiler::config config = get_compiler_config(project_dir);
-    compiler compiler_(config);
+    Compiler::Config config = get_compiler_config(project_dir);
+    Compiler compiler_(config);
 
-    int result = compiler_.compile_all(source_files);
+    int result = compiler_.CompileAll(source_files);
     if (result != 0) {
         throw std::runtime_error("Build failed!");
     }
@@ -191,7 +219,7 @@ void build::build_project(const std::string& path) {
 void build::run_project(const std::string& path) {
     fs::path project_dir = fs::absolute(path);
 
-    compiler::config config = get_compiler_config(project_dir);
+    Compiler::Config config = get_compiler_config(project_dir);
 
 #ifdef _WIN32
     std::string run_path = (project_dir / config.build_dir / (config.output_name + ".exe")).string();
@@ -205,7 +233,7 @@ void build::run_project(const std::string& path) {
     std::atomic<bool> done(false);
     std::thread t(spinner, "Running " + config.output_name, std::ref(done));
 
-    int r = build_shell_.run(run_path);
+    int r = build_shell_.Run(run_path);
 
     done = true;
     t.join();

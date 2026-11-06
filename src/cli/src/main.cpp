@@ -12,7 +12,7 @@
 #include <vector>
 
 cppkg::package CliPackage;
-cppkg::command_system CliCmd;
+cppkg::CommandSystem CliCmd;
 cppkg::github CliGit;
 cppkg::build CliBuild;
 
@@ -123,7 +123,7 @@ void* GitCommand(int argc, char* argv[]) {
                   << cppkg::ux::color::reset;
         return nullptr;
     }
-    CliCmd.run("git " + argument);
+    CliCmd.Run("git " + argument);
     return nullptr;
 }
 
@@ -244,10 +244,13 @@ int ExecuteCommand(int argc, char* argv[]) {
 
         if (!expanded.empty()) {
             command_name = expanded[0];
-            command_args.clear();
+            std::vector<std::string> expanded_args;
             for (size_t i = 1; i < expanded.size(); ++i) {
-                command_args.push_back(expanded[i]);
+                expanded_args.push_back(expanded[i]);
             }
+            // keep whatever the user typed after the alias name
+            expanded_args.insert(expanded_args.end(), command_args.begin(), command_args.end());
+            command_args = std::move(expanded_args);
         }
     }
 

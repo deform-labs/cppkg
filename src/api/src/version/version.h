@@ -5,9 +5,9 @@
 
 /// Get the current Git commit hash (short version) for the repository.
 inline std::string get_git_commit() {
-    cppkg::command_system shell_;
+    cppkg::CommandSystem shell_;
     // `git rev-parse --short HEAD` gives a short 7‑character hash.
-    std::string out = shell_.run_with_output("git rev-parse --short HEAD");
+    std::string out = shell_.RunWithOutput("git rev-parse --short HEAD");
     if (out.empty()) return "unknown";
 
     // Trim trailing new‑line characters.

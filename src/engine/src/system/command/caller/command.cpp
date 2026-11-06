@@ -6,12 +6,12 @@
 using namespace cppkg;
 
 /// JUST DO IT
-int command_system::run(const std::string& command) {
+int CommandSystem::Run(const std::string& command) {
     return std::system(command.c_str());
 }
 
 /// shh mom will hear us
-int command_system::run_quiet(const std::string& command) {
+int CommandSystem::RunQuiet(const std::string& command) {
     #ifdef _WIN32
         std::string cmd = command + " > nul 2>&1";
     #else
@@ -22,7 +22,7 @@ int command_system::run_quiet(const std::string& command) {
 }
 
 /// mom heard us!
-std::string command_system::run_with_output(const std::string& command) {
+std::string CommandSystem::RunWithOutput(const std::string& command) {
     #ifdef _WIN32
         // Use _popen on Windows
         FILE* pipe = _popen(command.c_str(), "r");
@@ -48,12 +48,12 @@ std::string command_system::run_with_output(const std::string& command) {
 }
 
 /// i cant find it!
-bool command_system::command_exists(const std::string& command) {
+bool CommandSystem::DoesCommandExist(const std::string& command) {
     #ifdef _WIN32
-        return run_quiet("where " + command) == 0;
+        return RunQuiet("where " + command) == 0;
     #else
         /// roses are red, violets are blue, we don't know what's best for these two.
-        if (run_quiet("command -v " + command) == 0) return true;
-        return run_quiet("which " + command) == 0;
+        if (RunQuiet("command -v " + command) == 0) return true;
+        return RunQuiet("which " + command) == 0;
     #endif
 }

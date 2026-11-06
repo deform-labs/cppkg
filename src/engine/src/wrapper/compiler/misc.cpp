@@ -3,7 +3,7 @@
 #include <iostream>
 
 /// compile the source code of the package
-int cppkg::compiler::compile_sourcedir(compiler& wrapper, const compiler::config& config,
+int cppkg::Compiler::CompileSourceDirectory(Compiler& wrapper, const Compiler::Config& config,
                               const std::vector<std::string>& source_files, bool msvc,
                               std::vector<std::string>& obj_files) {
     int total_errors = 0;
@@ -23,7 +23,7 @@ int cppkg::compiler::compile_sourcedir(compiler& wrapper, const compiler::config
         std::filesystem::create_directories(config.build_dir + "/objs");
 
         std::string obj = config.build_dir + "/objs/" + filename + (msvc ? ".obj" : ".o");
-        int result = wrapper.compile(source, obj);
+        int result = wrapper.Compile(source, obj);
 
         if (result != 0) {
             total_errors++;
@@ -38,12 +38,12 @@ int cppkg::compiler::compile_sourcedir(compiler& wrapper, const compiler::config
 }
 
 /// wrap a string in quotes :)
-std::string cppkg::compiler::quote(const std::string& s) {
+std::string cppkg::Compiler::Quote(const std::string& s) {
     return "\"" + s + "\"";
 }
 
 /// check if the user is using msvc or just has msvc in the path
-bool cppkg::compiler::is_msvc(const std::string& compiler_path) {
+bool cppkg::Compiler::IsMSVC(const std::string& compiler_path) {
     std::string p = compiler_path;
     for (auto& c : p) c = (char)tolower(c);
     return (
@@ -58,7 +58,7 @@ bool cppkg::compiler::is_msvc(const std::string& compiler_path) {
 }
 
 /// translate a flag to its msvc equivalent if necessary
-std::string cppkg::compiler::translate_flag(const std::string& flag, bool msvc) {
+std::string cppkg::Compiler::TranslateFlag(const std::string& flag, bool msvc) {
     if (!msvc) return flag;
     if (flag == "-Wall" || flag == "-Wextra") return "/W4";
     if (flag == "-O2")  return "/O2";
@@ -70,26 +70,28 @@ std::string cppkg::compiler::translate_flag(const std::string& flag, bool msvc) 
 }
 
 /// handle the linker for windows users
-std::string cppkg::compiler::handle_msvc_linker(const cppkg::compiler::config& config, const std::vector<std::string>& obj_files) {
+std::string cppkg::Compiler::HandleMSVCLinker(const cppkg::Compiler::Config& config, const std::vector<std::string>& obj_files) {
     std::string out = config.build_dir + "/" + (config.output_name.empty() ? "program" : config.output_name) + ".exe";
-    std::string link_cmd = "link /nologo /OUT:" + quote(out);
+    std::string link_cmd = "link /nologo /OUT:" + Quote(out);
+    for (const auto& path : config.library_paths)
+        link_cmd += " /LIBPATH:" + Quote(path);
     for (const auto& lib : config.libraries)
         link_cmd += " " + lib + ".lib";
     for (const auto& obj : obj_files)
-        link_cmd += " " + quote(obj);
+        link_cmd += " " + Quote(obj);
     return link_cmd;
 }
 
 /// handle the linker for other platforms such as linux & macos
-std::string cppkg::compiler::handle_linux_macos_linker(const cppkg::compiler::config& config, const std::vector<std::string>& obj_files) {
+std::string cppkg::Compiler::HandleLinuxMacOSLinker(const cppkg::Compiler::Config& config, const std::vector<std::string>& obj_files) {
     std::string out = config.build_dir + "/" + (config.output_name.empty() ? "program" : config.output_name);
-    std::string link_cmd = quote(config.compiler_path);
+    std::string link_cmd = Quote(config.compiler_path);
     for (const auto& obj : obj_files)
-        link_cmd += " " + quote(obj);
+        link_cmd += " " + Quote(obj);
     for (const auto& path : config.library_paths)
-        link_cmd += " -L" + quote(path);
+        link_cmd += " -L" + Quote(path);
     for (const auto& lib : config.libraries)
         link_cmd += " -l" + lib;
-    link_cmd += " -o " + quote(out);
+    link_cmd += " -o " + Quote(out);
     return link_cmd;
 }

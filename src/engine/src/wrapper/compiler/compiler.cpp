@@ -19,15 +19,24 @@ namespace cppkg {
         BuildBaseCommand();
     }
 
+    std::string Compiler::StdVersion(const std::string& cpp_std) {
+        std::string ver = cpp_std;
+        if (ver.size() > 3 && (ver.compare(0, 3, "c++") == 0 || ver.compare(0, 3, "C++") == 0))
+            ver = ver.substr(3);
+        if (ver == "latest") ver = "23";  // no portable spelling; pin to the newest we know
+        if (ver.empty()) ver = "20";
+        return ver;
+    }
+
     void Compiler::BuildBaseCommand() {
         bool msvc = IsMSVC(config_.compiler_path);
         build_command_.clear();
         build_command_.push_back(config_.compiler_path);
 
+        // Accept "c++20", "20" or "latest" from the manifest; reduce once to a bare version.
+        const std::string ver = StdVersion(config_.cpp_std);
+
         if (msvc) {
-            std::string raw = config_.cpp_std;
-            // Strip leading "c++" if present
-            std::string ver = (raw.size() > 3 && raw.substr(0, 3) == "c++") ? raw.substr(3) : raw;
             std::string msvc_std;
             if (ver == "14") msvc_std = "/std:c++14";
             else if (ver == "17") msvc_std = "/std:c++17";
@@ -38,7 +47,8 @@ namespace cppkg {
             build_command_.push_back("/EHsc");
             build_command_.push_back("/nologo");
         } else {
-            build_command_.push_back("-std=" + config_.cpp_std);
+            // GCC and Clang want the full spelling: -std=c++20, never -std=20.
+            build_command_.push_back("-std=c++" + ver);
         }
 
         std::vector<std::string> seen;
@@ -83,15 +93,15 @@ namespace cppkg {
     }
 
     bool Compiler::CheckCache(const std::string& source, const std::string& output) {
-        if (config.cache_dir.empty()) return false;
-        std::filesystem::create_directories(config.cache_dir);
+        if (config_.cache_dir.empty()) return false;
+        std::filesystem::create_directories(config_.cache_dir);
         std::string SourceHash = GetFileHash(source);
-        std::string CacheFile = config.cache_dir + "/" + SourceHash;
+        std::string CacheFile = config_.cache_dir + "/" + SourceHash;
         if (std::filesystem::exists(CacheFile) && std::filesystem::exists(output)) {
             auto CacheTime  = std::filesystem::last_write_time(CacheFile);
             auto SourceTime = std::filesystem::last_write_time(source);
             if (CacheTime > SourceTime) {
-                if (config.verbose)
+                if (config_.verbose)
                     std::cout << "Cache hit for " << source << std::endl;
                 return true;
             }
@@ -100,9 +110,9 @@ namespace cppkg {
     }
 
     void Compiler::StoreCache(const std::string& source, const std::string& output) {
-        if (config.cache_dir.empty()) return;
+        if (config_.cache_dir.empty()) return;
         std::string SourceHash = GetFileHash(source);
-        std::string CacheFile = config.cache_dir + "/" + SourceHash;
+        std::string CacheFile = config_.cache_dir + "/" + SourceHash;
         std::error_code ErrorCode;
         std::filesystem::copy_file(output, CacheFile,
             std::filesystem::copy_options::overwrite_existing, ErrorCode);
@@ -115,7 +125,7 @@ namespace cppkg {
             return 1;
         }
 
-        bool msvc = IsMSVC(config.compiler_path);
+        bool msvc = IsMSVC(config_.compiler_path);
         std::string ObjectFile = output_file;
 
         if (ObjectFile.empty()) {
@@ -124,7 +134,7 @@ namespace cppkg {
             if (slash != std::string::npos) filename = filename.substr(slash + 1);
             auto dot = filename.find_last_of('.');
             if (dot != std::string::npos) filename = filename.substr(0, dot);
-            ObjectFile = config.build_dir + "/objs/" + filename + (msvc ? ".obj" : ".o");
+            ObjectFile = config_.build_dir + "/objs/" + filename + (msvc ? ".obj" : ".o");
         }
 
         if (CheckCache(source_file, ObjectFile)) return 0;
@@ -143,7 +153,7 @@ namespace cppkg {
             CommandString += " -c " + source_file + " -o" + ObjectFile;
         }
 
-        if (config.verbose)
+        if (config_.verbose)
             std::cout << ux::color::cyan << "COMMAND: " << Quote(CommandString) << ux::color::reset << std::endl;
 
         int result = CompilerShell.RunQuiet(CommandString);
@@ -159,15 +169,15 @@ namespace cppkg {
 
     /// Compile all source files in a directory and link them into a single executable
     int Compiler::CompileAll(const std::vector<std::string>& source_files) {
-        bool msvc = IsMSVC(config.compiler_path);
+        bool msvc = IsMSVC(config_.compiler_path);
         int TotalErrors = 0;
         std::vector<std::string> ObjectFiles;
 
-        std::filesystem::create_directories(config.build_dir);
+        std::filesystem::create_directories(config_.build_dir);
         auto start_time = std::chrono::steady_clock::now();
 
         // Compile each source file into an object file
-        TotalErrors = Compiler::CompileSourceDirectory(*this, config, source_files, msvc, ObjectFiles  );
+        TotalErrors = Compiler::CompileSourceDirectory(*this, config_, source_files, msvc, ObjectFiles  );
 
         if (ObjectFiles.empty()) {
             std::cerr << ux::color::red << "No object files to link" << ux::color::reset << std::endl;
@@ -178,10 +188,10 @@ namespace cppkg {
         std::cout << ux::color::yellow << "[LINKER] Linking..." << ux::color::reset << std::endl;
 
         std::string LinkCMD = msvc
-            ? HandleMSVCLinker(config, ObjectFiles)
-            : HandleLinuxMacOSLinker(config, ObjectFiles);
+            ? HandleMSVCLinker(config_, ObjectFiles)
+            : HandleLinuxMacOSLinker(config_, ObjectFiles);
 
-        if (config.verbose)
+        if (config_.verbose)
             std::cout << ux::color::cyan << "LINK COMMAND: " << LinkCMD << ux::color::reset << std::endl;
 
         int link_result = CompilerShell.RunQuiet(LinkCMD);
