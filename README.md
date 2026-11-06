@@ -78,6 +78,28 @@ cppkg build my-project
 - Clones any missing dependencies into `target/deps/`
 - Compiles with your own compiler! no cmake and nothing extra is needed. use your pre-existing compiler on your computer!
 - **Automatically parallel** (uses all CPU cores) and **cached** (fast rebuilds)
+- Writes `compile_commands.json` for clangd and other tooling
+
+### Editor support
+
+Every `cppkg build` writes `compile_commands.json` at the project root, with one entry per source file:
+
+```json
+[
+  {
+    "directory": "/home/me/my-project",
+    "file": "/home/me/my-project/src/main.cpp",
+    "output": "/home/me/my-project/target/objs/main.o",
+    "command": "g++ -std=c++20 -Wall -Wextra -O2 -I\"src\" -c \"/home/me/my-project/src/main.cpp\" -o \"/home/me/my-project/target/objs/main.o\" -MMD -MF \"/home/me/my-project/target/objs/main.o.d\""
+  }
+]
+```
+
+- Paths are absolute and `command` is exactly what cppkg runs, so any tool can replay an entry from any working directory.
+- It is rewritten on every build, including builds where every object is already up to date, so it never advertises flags or include paths you have since changed.
+- It sits next to `cppkg.toml`, not inside `target/`, so `cppkg clean` leaves it alone. Add it to `.gitignore` if you would rather not commit it.
+- Point clangd at the project and it picks up the standard, `compiler_flags` and dependency include paths with no `compile_flags.txt` needed.
+
 ### Remove a dependency
  
 ```
@@ -107,6 +129,38 @@ gabime/spdlog = "v1.12.0"
 ```
  
 The key under `[dependencies]` is `author/repo`, the value is the tag or branch to clone.
+
+### Manifest reference
+
+| Table | Key | Meaning |
+|---|---|---|
+| `[package]` | `name` | Project name. Required. Also the name of the output binary (`target/<name>`). |
+| `[package]` | `version` | Package version. |
+| `[package]` | `cpp_std` | C++ standard, default `c++20`. `c++20`, `20` and `latest` all work. |
+| `[package]` | `compiler` | Compiler executable, e.g. `clang++`. Defaults to `g++` (`cl` on Windows). |
+| `[package]` | `description`, `authors`, `license` | Metadata only; not used by the build. |
+| `[compiler]` | `IncludePaths` | Extra `-I` roots, e.g. `["src", "vendor/include"]`. |
+| `[compiler]` | `LibraryPaths` | Extra `-L` roots, e.g. `["vendor/lib"]`. |
+| `[compiler]` | `Libraries` | Libraries to link; `["fmt"]` becomes `-lfmt`. |
+| `[compiler]` | `compiler_flags` | Extra flags appended to the defaults (`-Wall -Wextra -O2`). |
+| `[dependencies]` | `author/repo` | Dependency to clone; the value is its tag or branch. |
+| `[workspace]` | `members` | Sub-packages of a workspace root. |
+
+Everything except `name` is optional. Dependencies pulled into `target/deps/` get their header roots and `lib/` directories added to the compile and link paths automatically.
+
+Unknown keys are reported rather than silently ignored, so a typo does not quietly do nothing:
+
+```
+[WARN] cppkg.toml: unknown key "Compiler_Flags" in [compiler], ignored
+```
+
+The manifest is read by a real TOML parser: comments anywhere, multi-line arrays with trailing commas, and both `"basic"` and `'literal'` strings with `\n`, `\t`, `\"`, `\\` and `\uXXXX` escapes. A malformed manifest names the file and line and stops the build instead of guessing:
+
+```
+cppkg.toml:3: duplicate key "name" in [package]
+cppkg.toml:2: expected '=' after key "name"
+cppkg.toml: missing key "name" in [package]
+```
  
 ## Workspaces
  
